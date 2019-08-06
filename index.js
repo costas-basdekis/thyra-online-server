@@ -2,6 +2,7 @@ const app = require('express')();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
 const uuid4 = require('uuid4');
+const {Game} = require('./game/game');
 
 app.get('/', function(req, res){
   res.send('<h1>Hello world</h1>');
@@ -87,6 +88,7 @@ io.on('connection', function(socket){
           id,
           userIds: [otherUser.id, user.id],
           finished: false,
+          game: Game.create().serialize(),
         };
         games[game.id] = game;
         console.log('started game', game);
