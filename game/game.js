@@ -26,18 +26,18 @@ class Game {
   static create() {
     const cells = this.getInitialCells();
     const status = this.getInitialStatus();
-    return new this(cells, status, null, false, true);
+    return new this(cells, status, null, null, false);
   }
 
-  createStep(cells, status) {
-    return new this.constructor(cells, status, this, false);
+  createStep(cells, status, lastMove) {
+    return new this.constructor(cells, status, this, lastMove, false);
   }
 
-  createNext(cells, status) {
-    return new this.constructor(cells, status, this, true);
+  createNext(cells, status, lastMove) {
+    return new this.constructor(cells, status, this, lastMove, true);
   }
 
-  constructor(cells, status, previous, isNextMove) {
+  constructor(cells, status, previous, lastMove, isNextMove) {
     if (!cells || !status) {
       throw new Error("You need to pass cells, status, and previous game");
     }
@@ -45,9 +45,11 @@ class Game {
     this.history = (this.previous ? this.previous.history : [])
       .filter(game => !game.canUndo)
       .concat([this]);
+    this.fullHistory = (this.previous ? this.previous.fullHistory : []).concat(this);
     this.isNextMove = isNextMove;
     this.moveCount = this.previous ? (isNextMove ? this.previous.moveCount + 1 : this.previous.moveCount) : 1;
     this.chainCount = this.previous ? this.previous.chainCount + 1 : 0;
+    this.lastMove = lastMove;
 
     this.cells = cells;
     this.allCells = Object.values(this.cells)
@@ -58,11 +60,12 @@ class Game {
       cells: this.constructor.COLUMNS.map(x => this.cells[y][x]),
     }));
 
-    const {nextPlayer, moveType, availableMoves, canUndo} = status;
+    const {nextPlayer, moveType, availableMoves, canUndo, resignedPlayer} = status;
     this.nextPlayer = nextPlayer;
     this.moveType = moveType;
     this.availableMoves = availableMoves;
     this.canUndo = canUndo;
+    this.resignedPlayer = resignedPlayer;
 
     this.winner = this.getWinner();
     if (this.winner) {
@@ -87,17 +90,19 @@ class Game {
         moveType: this.moveType,
         availableMoves: this.availableMoves,
         canUndo: this.canUndo,
+        resignedPlayer: this.resignedPlayer,
       },
       previous: this.previous ? this.previous.serialize() : null,
+      lastMove: this.lastMove,
       isNextMove: this.isNextMove,
     };
   }
 
-  static deserialize({cells, status, previous, isNextMove}) {
+  static deserialize({cells, status, previous, lastMove, isNextMove}) {
     if (previous) {
       previous = this.deserialize(previous);
     }
-    return new this(cells, status, previous, isNextMove);
+    return new this(cells, status, previous, lastMove, isNextMove);
   }
 
   static getInitialCells() {
@@ -150,6 +155,10 @@ class Game {
   }
 
   getWinner() {
+    if (this.resignedPlayer) {
+      return this.constructor.OTHER_PLAYER[this.resignedPlayer];
+    }
+
     const winningCell = this.allCells.find(cell => cell.player && cell.level === 3);
     if (!winningCell) {
       return null;
@@ -217,6 +226,16 @@ class Game {
     }
   }
 
+  resign(player) {
+    return this.createStep(this.cells, {
+      nextPlayer: this.nextPlayer,
+      moveType: this.moveType,
+      availableMoves: this.availableMoves,
+      canUndo: false,
+      resignedPlayer: player,
+    }, null);
+  }
+
   makeMove(coordinates) {
     const makeMoveMethods = {
       [this.constructor.MOVE_TYPE_PLACE_FIRST_WORKER]: this.placeFirstWorker,
@@ -260,7 +279,8 @@ class Game {
       moveType: this.constructor.MOVE_TYPE_PLACE_SECOND_WORKER,
       availableMoves: this.getEmptyCellsAvailableMoves(cells),
       canUndo: true,
-    }, false);
+      resignedPlayer: null,
+    }, {x, y});
   }
 
   placeSecondWorker({x, y}) {
@@ -278,7 +298,7 @@ class Game {
       },
     };
     const nextPlayer = this.constructor.OTHER_PLAYER[this.nextPlayer];
-    return this.createStep(cells, {
+    return this.createNext(cells, {
       nextPlayer: nextPlayer,
       moveType: nextPlayer === this.constructor.PLAYER_A
         ? this.constructor.MOVE_TYPE_SELECT_WORKER_TO_MOVE
@@ -287,7 +307,8 @@ class Game {
         ? this.getPlayerAvailableMoves(cells, nextPlayer)
         : this.getEmptyCellsAvailableMoves(cells),
       canUndo: false,
-    }, nextPlayer === this.constructor.PLAYER_A);
+      resignedPlayer: null,
+    }, {x, y});
   }
 
   selectWorkerToMove({x, y}) {
@@ -301,7 +322,8 @@ class Game {
         : this.constructor.MOVE_TYPE_MOVE_SECOND_WORKER,
       availableMoves: this.getMovableAvailableMoves(this.cells, {x, y}),
       canUndo: true,
-    }, false);
+      resignedPlayer: null,
+    }, {x, y});
   }
 
   moveWorker(to, worker) {
@@ -334,7 +356,8 @@ class Game {
       moveType: this.constructor.MOVE_TYPE_BUILD_AROUND_WORKER,
       availableMoves: this.getBuildableAvailableMoves(cells, to),
       canUndo: true,
-    }, false);
+      resignedPlayer: null,
+    }, {x: to.x, y: to.y});
   }
 
   moveFirstWorker({x, y}) {
@@ -368,7 +391,8 @@ class Game {
       moveType: this.constructor.MOVE_TYPE_SELECT_WORKER_TO_MOVE,
       availableMoves: this.getPlayerAvailableMoves(cells, nextPlayer),
       canUndo: false,
-    });
+      resignedPlayer: null,
+    }, {x, y});
   }
 }
 
