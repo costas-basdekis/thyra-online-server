@@ -16,6 +16,8 @@ const uuid4 = require('uuid4');
 const {Game} = require('./game/game');
 const fs = require('fs');
 
+const minAppVersion = 1;
+
 app.get('/', function(req, res){
   res.send('<h1>Hello world</h1>');
 });
@@ -51,6 +53,10 @@ const loadData = () => {
 };
 
 const {users, games} = loadData();
+
+const askUserToReload = socket => {
+  socket.emit('reload');
+};
 
 const createUser = (socket) => {
     let id = uuid4();
@@ -247,7 +253,20 @@ const emitGames = (socket = io) => {
 io.on('connection', function(socket){
   console.log('a user connected');
   let user = null;
-  socket.on('create-user', ({id, password} = {}) => {
+  socket.on('create-user', ({appVersion, id, password} = {}) => {
+    if (!appVersion) {
+      console.log('user has app with no version');
+      // Try anyway to make it reload
+      askUserToReload(socket);
+      user = null;
+      return;
+    }
+    if (appVersion < minAppVersion) {
+      console.log('user has old app version', {appVersion, minAppVersion});
+      askUserToReload(socket);
+      user = null;
+      return;
+    }
     if (user) {
       emitUser(user);
       emitUsers(socket);
