@@ -1,3 +1,5 @@
+const _ = require('lodash');
+
 class Game {
   static PLAYER_A = 'player-a';
   static PLAYER_B = 'player-b';
@@ -22,11 +24,58 @@ class Game {
 
   static ROWS = Array.from({length: 5}, (value, index) => index);
   static COLUMNS = Array.from({length: 5}, (value, index) => index);
+  static MOVE_NOTATION = this.ROWS.map(y => this.COLUMNS.map(x =>
+    `${['A', 'B', 'C', 'D', 'E'][x]}${['1', '2', '3', '4', '5'][y]}`));
+  static RESIGNED_NOTATION = {
+    [this.PLAYER_A]: 'RA',
+    [this.PLAYER_B]: 'RB',
+  };
+  static REVERSE_NOTATION = {
+    ..._.fromPairs(_.flatten(this.ROWS.map(y => this.COLUMNS.map(x =>
+      [`${['A', 'B', 'C', 'D', 'E'][x]}${['1', '2', '3', '4', '5'][y]}`, {x, y}])))),
+    'RA': [{resign: this.PLAYER_A}],
+    'RB': [{resign: this.PLAYER_B}],
+  };
+  static NOTATION_COMPRESSION = _.fromPairs(Object.keys(this.REVERSE_NOTATION).sort().map((value, index) =>
+    [value, String.fromCharCode(index < 26 ? 65 + index : 48 + (index - 26))]));
+  static NOTATION_DECOMPRESSION = _.fromPairs(Object.keys(this.REVERSE_NOTATION).sort().map((value, index) =>
+    [String.fromCharCode(index < 26 ? 65 + index : 48 + (index - 26)), this.REVERSE_NOTATION[value]]));
 
   static create() {
     const cells = this.getInitialCells();
     const status = this.getInitialStatus();
     return new this(cells, status, null, null, false);
+  }
+
+  static fromMoves(moves) {
+    let game = this.create();
+    for (const move of moves) {
+      game = game.makeMove(move);
+    }
+
+    return game;
+  }
+
+  static fromNotation(fullNotation) {
+    const moves = fullNotation
+      .split('')
+      .map(part => this.REVERSE_NOTATION[part]);
+    if (moves.filter(move => !move).length) {
+      return null;
+    }
+
+    return this.fromMoves(moves);
+  }
+
+  static fromCompressedNotation(compressedFullNotation) {
+    const moves = compressedFullNotation
+      .split('')
+      .map(part => this.NOTATION_DECOMPRESSION[part]);
+    if (moves.filter(move => !move).length) {
+      return null;
+    }
+
+    return this.fromMoves(moves);
   }
 
   createStep(cells, status, lastMove) {
@@ -67,6 +116,17 @@ class Game {
     this.availableMoves = availableMoves;
     this.canUndo = canUndo;
     this.resignedPlayer = resignedPlayer;
+    this.moveNotation = resignedPlayer
+      ? this.constructor.RESIGNED_NOTATION[resignedPlayer]
+      : (lastMove
+        ? this.constructor.MOVE_NOTATION[lastMove.y][lastMove.x]
+        : '');
+    this.fullNotation = `${this.previous ? this.previous.fullNotation : ''}${this.moveNotation}`;
+    this.compressedFullNotation = this.fullNotation
+      .split(/(..)/)
+      .filter(part => part)
+      .map(part => this.constructor.NOTATION_COMPRESSION[part])
+      .join('');
 
     this.winner = this.getWinner();
     if (this.winner) {
@@ -119,12 +179,7 @@ class Game {
   }
 
   static deserializeCompact({moves}) {
-    let game = this.create();
-    for (const move of moves) {
-      game = game.makeMove(move);
-    }
-
-    return game;
+    return this.fromMoves(moves);
   }
 
   static deserializeVerbose({cells, status, previous, lastMove, isNextMove}) {
