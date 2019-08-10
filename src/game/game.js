@@ -267,7 +267,7 @@ class Game {
 
   makeMove(coordinates) {
     if (coordinates.resign) {
-      return this.resign(coordinates.player)
+      return this.resign(coordinates.resign);
     }
     const makeMoveMethods = {
       [this.constructor.MOVE_TYPE_PLACE_FIRST_WORKER]: this.placeFirstWorker,
