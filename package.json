@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "express": "^4.17.1",
+    "lodash": "^4.17.15",
     "socket.io": "^2.2.0",
     "uuid4": "^1.1.4"
   }

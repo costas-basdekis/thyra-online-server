@@ -49,7 +49,8 @@ class Game {
     this.isNextMove = isNextMove;
     this.moveCount = this.previous ? (isNextMove ? this.previous.moveCount + 1 : this.previous.moveCount) : 1;
     this.chainCount = this.previous ? this.previous.chainCount + 1 : 0;
-    this.lastMove = lastMove;
+    this.lastMove = lastMove ? lastMove : (status.resignedPlayer ? {resign: status.resignedPlayer} : lastMove);
+    this.moves = this.previous ? this.previous.moves.concat([this.lastMove]) : [];
 
     this.cells = cells;
     this.allCells = Object.values(this.cells)
@@ -83,6 +84,17 @@ class Game {
   }
 
   serialize() {
+    return this.serializeCompact();
+  }
+
+  serializeCompact() {
+    console.log('Serialize moves', this.moves);
+    return {
+      moves: this.moves,
+    };
+  }
+
+  serializeVerbose() {
     return {
       cells: this.cells,
       status: {
@@ -98,7 +110,24 @@ class Game {
     };
   }
 
-  static deserialize({cells, status, previous, lastMove, isNextMove}) {
+  static deserialize(serialized) {
+    if (serialized.moves) {
+      return this.deserializeCompact(serialized);
+    } else {
+      return this.deserializeVerbose(serialized);
+    }
+  }
+
+  static deserializeCompact({moves}) {
+    let game = this.create();
+    for (const move of moves) {
+      game = game.makeMove(move);
+    }
+
+    return game;
+  }
+
+  static deserializeVerbose({cells, status, previous, lastMove, isNextMove}) {
     if (previous) {
       previous = this.deserialize(previous);
     }
@@ -233,10 +262,13 @@ class Game {
       availableMoves: this.availableMoves,
       canUndo: false,
       resignedPlayer: player,
-    }, null);
+    }, {resign: player});
   }
 
   makeMove(coordinates) {
+    if (coordinates.resign) {
+      return this.resign(coordinates.player)
+    }
     const makeMoveMethods = {
       [this.constructor.MOVE_TYPE_PLACE_FIRST_WORKER]: this.placeFirstWorker,
       [this.constructor.MOVE_TYPE_PLACE_SECOND_WORKER]: this.placeSecondWorker,

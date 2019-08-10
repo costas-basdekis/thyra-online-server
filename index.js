@@ -13,8 +13,10 @@ const io = require('socket.io')(http, {
   },
 });
 const uuid4 = require('uuid4');
-const {Game} = require('./game/game');
+const {Game} = require('./src/game/game');
+const {getInitialData, migrate} = require('./src/migrations');
 const fs = require('fs');
+const _ = require('lodash');
 
 const minAppVersion = 1;
 
@@ -22,19 +24,12 @@ app.get('/', function(req, res){
   res.send('<h1>Hello world</h1>');
 });
 
-const saveData = () => {
+const saveData = (data = globalData) => {
   if (fs.existsSync('data.json')) {
     fs.copyFileSync('data.json', 'data.json.backup');
   }
-  const writeUsers = {};
-  for (const user of Object.values(users)) {
-    writeUsers[user.id] = {...user, sockets: []};
-  }
-  const writeGames = {};
-  for (const game of Object.values(games)) {
-    writeGames[game.id] = {...game, game: null};
-  }
-  fs.writeFileSync('data.json', JSON.stringify({users: writeUsers, games: writeGames}, undefined, 2));
+  const dataForSave = prepareDataForSave(data);
+  fs.writeFileSync('data.json', JSON.stringify(dataForSave));
   if (!fs.existsSync('data.json')) {
     console.error("Just wrote data but could not find the file");
     throw new Error("Just wrote data but could not find the file");
@@ -42,17 +37,45 @@ const saveData = () => {
 };
 
 const loadData = () => {
+  let dataFromLoad;
   if (!fs.existsSync('data.json')) {
-    return {users: {}, games: {}};
+    dataFromLoad = getInitialData();
+  } else {
+    dataFromLoad = JSON.parse(fs.readFileSync('data.json'));
   }
-  const {users: loadUsers, games: loadGames} = JSON.parse(fs.readFileSync('data.json'));
-  for (const game of Object.values(loadGames)) {
-    game.game = Game.deserialize(game.serializedGame);
+  const migrated = migrate(dataFromLoad);
+  const data = prepareDataFromLoad(dataFromLoad);
+  if (migrated) {
+    saveData(dataFromLoad);
   }
-  return {users: loadUsers, games: loadGames};
+  return data;
 };
 
-const {users, games} = loadData();
+const prepareDataForSave = data => {
+  return {
+    version: data.version,
+    users: Object.values(data.users).map(user => _.omit(user, ['sockets', 'online', 'readyToPlay'])),
+    games: Object.values(data.games).map(game => _.omit(game, ['game'])),
+  };
+};
+
+const prepareDataFromLoad = dataFromLoad => {
+  return {
+    version: dataFromLoad.version,
+    users: _.fromPairs(dataFromLoad.users.map(user => [user.id, {
+      ...user,
+      sockets: [],
+      online: false,
+      readyToPlay: false,
+    }])),
+    games: _.fromPairs(dataFromLoad.games.map(game => [game.id, {
+      ...game,
+      game: Game.deserialize(game.serializedGame),
+    }])),
+  };
+};
+
+const globalData = loadData();
 
 const askUserToReload = socket => {
   socket.emit('reload');
@@ -60,7 +83,7 @@ const askUserToReload = socket => {
 
 const createUser = (socket) => {
     let id = uuid4();
-    while (id in users) {
+    while (id in globalData.users) {
       id = uuid4();
     }
     const user = {
@@ -71,14 +94,14 @@ const createUser = (socket) => {
       readyToPlay: false,
       sockets: [socket],
     };
-    users[user.id] = user;
+    globalData.users[user.id] = user;
     saveData();
 
     return user;
 };
 
 const loadUser = (id, socket) => {
-  const user = users[id];
+  const user = globalData.users[id];
   user.online = true;
   user.sockets = user.sockets.includes(socket) ? user.sockets : user.sockets.concat([socket]);
   saveData();
@@ -87,7 +110,7 @@ const loadUser = (id, socket) => {
 
 const loadOrCreateUser = (id, password, socket) => {
   let user, created;
-  if (id && id in users && users[id].password === password) {
+  if (id && id in globalData.users && globalData.users[id].password === password) {
     user = loadUser(id, socket);
     console.log('existing user', user);
     created = false;
@@ -129,7 +152,7 @@ const changeUserReadyToPlay = (user, readyToPlay) => {
   user.readyToPlay = readyToPlay;
   let game, otherUser;
   if (readyToPlay) {
-    otherUser = Object.values(users).find(otherUser => otherUser.id !== user.id && otherUser.readyToPlay);
+    otherUser = Object.values(globalData.users).find(otherUser => otherUser.id !== user.id && otherUser.readyToPlay);
     if (otherUser) {
       user.readyToPlay = false;
       otherUser.readyToPlay = false;
@@ -148,7 +171,7 @@ const changeUserReadyToPlay = (user, readyToPlay) => {
 
 const createGame = (user, otherUser) => {
   let id = uuid4();
-  while (id in games) {
+  while (id in globalData.games) {
     id = uuid4();
   }
   const gameGame = Game.create();
@@ -163,7 +186,7 @@ const createGame = (user, otherUser) => {
     move: gameGame.moveCount,
     chainCount: gameGame.chainCount,
   };
-  games[game.id] = game;
+  globalData.games[game.id] = game;
   saveData();
 
   return game;
@@ -243,11 +266,11 @@ const emitUser = ({id, name, password, online, readyToPlay, sockets}) => {
 };
 
 const emitUsers = (socket = io) => {
-  socket.emit("users", Object.values(users).map(({id, name, online, readyToPlay}) => ({id, name, online, readyToPlay})));
+  socket.emit("users", Object.values(globalData.users).map(({id, name, online, readyToPlay}) => ({id, name, online, readyToPlay})));
 };
 
 const emitGames = (socket = io) => {
-  socket.emit("games", Object.values(games).map(({id, userIds, finished, serializedGame: game, move, chainCount}) => ({id, userIds, finished, game, move, chainCount})));
+  socket.emit("games", Object.values(globalData.games).map(({id, userIds, finished, serializedGame: game, move, chainCount}) => ({id, userIds, finished, game, move, chainCount})));
 };
 
 io.on('connection', function(socket){
@@ -294,7 +317,7 @@ io.on('connection', function(socket){
     if (!user) {
       return;
     }
-    const game = games[id];
+    const game = globalData.games[id];
     if (!game) {
       console.warn("Game not recognised", id);
       return;
