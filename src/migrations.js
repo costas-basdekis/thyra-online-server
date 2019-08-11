@@ -48,3 +48,17 @@ migrations.push({
     data.games = Object.values(data.games);
   },
 });
+
+migrations.push({
+  fromVersion: 2,
+  toVersion: 3,
+  description: "Add user settings",
+  migrate: data => {
+    for (const user of data.users) {
+      user.settings = {
+        autoSubmitMoves: false,
+        theme: {scheme: '', rotated: false, rounded: false, numbers: ''},
+      };
+    }
+  },
+});

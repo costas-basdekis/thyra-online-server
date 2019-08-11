@@ -92,6 +92,10 @@ const createUser = (socket) => {
       password: uuid4().slice(0, 4),
       online: true,
       readyToPlay: false,
+      settings: {
+        autoSubmitMoves: false,
+        theme: {scheme: '', rotated: false, rounded: false, numbers: ''},
+      },
       sockets: [socket],
     };
     globalData.users[user.id] = user;
@@ -145,6 +149,13 @@ const renameUser = (user, username) => {
   saveData();
   emitUser(user);
   emitUsers();
+};
+
+const updateUserSettings = (user, settings) => {
+  console.log("Updating settings for", user.name, "to", settings);
+  user.settings = settings;
+  saveData();
+  emitUser(user);
 };
 
 const changeUserReadyToPlay = (user, readyToPlay) => {
@@ -261,16 +272,16 @@ const submitGameMoves = (user, game, moves) => {
   emitGames();
 };
 
-const emitUser = ({id, name, password, online, readyToPlay, sockets}) => {
-  sockets.map(socket => socket.emit("user", {id, name, password, online, readyToPlay}));
+const emitUser = ({id, name, password, online, readyToPlay, settings, sockets}) => {
+  sockets.map(socket => socket.emit("user", {id, name, password, online, readyToPlay, settings}));
 };
 
 const emitUsers = (socket = io) => {
-  socket.emit("users", Object.values(globalData.users).map(({id, name, online, readyToPlay}) => ({id, name, online, readyToPlay})));
+  socket.emit("users", Object.values(globalData.users).map(({id, name, online, readyToPlay, settings}) => ({id, name, online, readyToPlay, settings})));
 };
 
 const emitGames = (socket = io) => {
-  socket.emit("games", Object.values(globalData.games).map(({id, userIds, finished, serializedGame: game, move, chainCount}) => ({id, userIds, finished, game, move, chainCount})));
+  socket.emit("games", Object.values(globalData.games).map(({id, userIds, finished, winner, winnerUserId, serializedGame: game, move, chainCount}) => ({id, userIds, finished, winner, winnerUserId, game, move, chainCount})));
 };
 
 io.on('connection', function(socket){
@@ -305,6 +316,13 @@ io.on('connection', function(socket){
     }
 
     renameUser(user, username);
+  });
+  socket.on('update-settings', settings => {
+    if (!user) {
+      return;
+    }
+
+    updateUserSettings(user, settings);
   });
   socket.on('change-ready-to-play', readyToPlay => {
     if (!user) {

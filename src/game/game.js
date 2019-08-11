@@ -148,7 +148,6 @@ class Game {
   }
 
   serializeCompact() {
-    console.log('Serialize moves', this.moves);
     return {
       moves: this.moves,
     };
