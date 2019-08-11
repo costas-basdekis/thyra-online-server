@@ -188,7 +188,7 @@ const createGame = (user, otherUser) => {
   const gameGame = Game.create();
   const game = {
     id,
-    userIds: [otherUser.id, user.id],
+    userIds: _.shuffle([otherUser.id, user.id]),
     finished: false,
     winner: null,
     winnerUserId: null,
