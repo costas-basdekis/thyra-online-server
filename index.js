@@ -159,11 +159,44 @@ const updateUserSettings = (user, settings) => {
 };
 
 const changeUserReadyToPlay = (user, readyToPlay) => {
-  console.log("User", user.name, "is", readyToPlay ? "" : "not", "ready to play");
+  console.log("User", user.name, "is", readyToPlay ? "" : "not", "ready to play", readyToPlay);
   user.readyToPlay = readyToPlay;
   let game, otherUser;
   if (readyToPlay) {
-    otherUser = Object.values(globalData.users).find(otherUser => otherUser.id !== user.id && otherUser.readyToPlay);
+    // Find challenged user
+    if (readyToPlay !== true) {
+      const challengedUser = globalData.users[readyToPlay];
+      if (!challengedUser) {
+        console.log('user challenged non-existing user');
+        user.readyToPlay = false;
+        return;
+      } else if(!challengedUser.online && !challengedUser.readyToPlay) {
+        console.log('challenged user is not online or not ready to play');
+        saveData();
+        emitUser(user);
+        emitUsers();
+        return;
+      } else if (challengedUser.readyToPlay !== true && challengedUser.readyToPlay !== user.id) {
+        console.log('challenged has challenged someone else');
+        saveData();
+        emitUser(user);
+        emitUsers();
+        return;
+      }
+      otherUser = challengedUser;
+    }
+    // If not a challenge, find users that challenged me
+    if (!otherUser) {
+      otherUser = Object.values(globalData.users).find(otherUser => {
+        return otherUser.id !== user.id && user.id === otherUser.readyToPlay;
+      });
+    }
+    // If no challenges, find any ready user
+    if (!otherUser) {
+      otherUser = Object.values(globalData.users).find(otherUser => {
+        return otherUser.id !== user.id && otherUser.readyToPlay;
+      });
+    }
     if (otherUser) {
       user.readyToPlay = false;
       otherUser.readyToPlay = false;
