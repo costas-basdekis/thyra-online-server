@@ -94,6 +94,7 @@ const createUser = (socket) => {
       readyToPlay: false,
       settings: {
         autoSubmitMoves: false,
+        enableNotifications: false,
         theme: {scheme: '', rotated: false, rounded: false, numbers: ''},
       },
       sockets: [socket],

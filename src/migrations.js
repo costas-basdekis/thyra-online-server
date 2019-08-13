@@ -62,3 +62,14 @@ migrations.push({
     }
   },
 });
+
+migrations.push({
+  fromVersion: 3,
+  toVersion: 4,
+  description: "Add 'enableNotifications' to user settings",
+  migrate: data => {
+    for (const user of data.users) {
+      user.settings.enableNotifications = true;
+    }
+  },
+});
