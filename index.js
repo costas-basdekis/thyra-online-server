@@ -220,9 +220,11 @@ const createGame = (user, otherUser) => {
     id = uuid4();
   }
   const gameGame = Game.create();
+  const userIds = _.shuffle([otherUser.id, user.id]);
   const game = {
     id,
-    userIds: _.shuffle([otherUser.id, user.id]),
+    userIds,
+    nextUserId: gameGame.nextPlayer === Game.PLAYER_A ? userIds[0] : gameGame.nextPlayer === Game.PLAYER_B ? userIds[1] : null,
     finished: false,
     winner: null,
     winnerUserId: null,
@@ -231,6 +233,7 @@ const createGame = (user, otherUser) => {
     move: gameGame.moveCount,
     chainCount: gameGame.chainCount,
   };
+  console.log('new game', game);
   globalData.games[game.id] = game;
   saveData();
 
@@ -251,6 +254,7 @@ const submitGameMoves = (user, game, moves) => {
     const resultingGame = game.game.resign(userPlayer);
     Object.assign(game, {
       game: resultingGame,
+      nextUserId: resultingGame.nextPlayer === Game.PLAYER_A ? game.userIds[0] : resultingGame.nextPlayer === Game.PLAYER_B ? game.userIds[1] : null,
       serializedGame: resultingGame.serialize(),
       move: resultingGame.moveCount,
       chainCount: resultingGame.chainCount,
@@ -294,6 +298,7 @@ const submitGameMoves = (user, game, moves) => {
 
   Object.assign(game, {
     game: resultingGame,
+    nextUserId: resultingGame.nextPlayer === Game.PLAYER_A ? game.userIds[0] : resultingGame.nextPlayer === Game.PLAYER_B ? game.userIds[1] : null,
     serializedGame: resultingGame.serialize(),
     move: resultingGame.moveCount,
     chainCount: resultingGame.chainCount,
@@ -315,7 +320,7 @@ const emitUsers = (socket = io) => {
 };
 
 const emitGames = (socket = io) => {
-  socket.emit("games", Object.values(globalData.games).map(({id, userIds, finished, winner, winnerUserId, serializedGame: game, move, chainCount}) => ({id, userIds, finished, winner, winnerUserId, game, move, chainCount})));
+  socket.emit("games", Object.values(globalData.games).map(({id, userIds, finished, winner, winnerUserId, nextUserId, serializedGame: game, move, chainCount}) => ({id, userIds, finished, winner, winnerUserId, nextUserId, game, move, chainCount})));
 };
 
 io.on('connection', function(socket){

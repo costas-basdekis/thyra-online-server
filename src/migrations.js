@@ -73,3 +73,15 @@ migrations.push({
     }
   },
 });
+
+migrations.push({
+  fromVersion: 4,
+  toVersion: 5,
+  description: "Export `game.nextUserId`",
+  migrate: data => {
+    for (const game of data.games) {
+      const gameGame = Game.deserialize(game.serializedGame);
+      game.nextUserId = gameGame.nextPlayer === Game.PLAYER_A ? game.userIds[0] : gameGame.nextPlayer === Game.PLAYER_B ? game.userIds[1] : null;
+    }
+  },
+});
