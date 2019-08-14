@@ -1,5 +1,6 @@
 const {Game} = require('./game/game');
 const _ = require('lodash');
+const moment = require('moment');
 
 const migrations = [];
 
@@ -82,6 +83,26 @@ migrations.push({
     for (const game of data.games) {
       const gameGame = Game.deserialize(game.serializedGame);
       game.nextUserId = gameGame.nextPlayer === Game.PLAYER_A ? game.userIds[0] : gameGame.nextPlayer === Game.PLAYER_B ? game.userIds[1] : null;
+    }
+  },
+});
+
+migrations.push({
+  fromVersion: 5,
+  toVersion: 6,
+  description: "Add game dates",
+  migrate: data => {
+    for (const game of data.games) {
+      const gameGame = Game.deserialize(game.serializedGame);
+      let lastDatetime = moment('2019-08-13T12:00:00.000Z');
+      game.startDatetime = lastDatetime;
+      game.movesDatetimes = gameGame.moves.map(() => {
+        lastDatetime = lastDatetime.clone().add(5, 'second');
+        return lastDatetime;
+      });
+      if (game.finished) {
+        game.endDatetime = lastDatetime;
+      }
     }
   },
 });

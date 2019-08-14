@@ -17,6 +17,7 @@ const {Game} = require('./src/game/game');
 const {getInitialData, migrate} = require('./src/migrations');
 const fs = require('fs');
 const _ = require('lodash');
+const moment = require('moment');
 
 const minAppVersion = 1;
 
@@ -55,7 +56,11 @@ const prepareDataForSave = data => {
   return {
     version: data.version,
     users: Object.values(data.users).map(user => _.omit(user, ['sockets', 'online', 'readyToPlay'])),
-    games: Object.values(data.games).map(game => _.omit(game, ['game'])),
+    games: Object.values(data.games).map(game => Object.assign(_.omit(game, ['game']), {
+      startDatetime: game.startDatetime.toISOString(),
+      endDatetime: game.endDatetime ? game.endDatetime.toISOString() : null,
+      movesDatetimes: game.movesDatetimes.map(datetime => datetime.toISOString()),
+    })),
   };
 };
 
@@ -71,6 +76,9 @@ const prepareDataFromLoad = dataFromLoad => {
     games: _.fromPairs(dataFromLoad.games.map(game => [game.id, {
       ...game,
       game: Game.deserialize(game.serializedGame),
+      startDatetime: moment(game.startDatetime),
+      endDatetime: game.endDatetime ? moment(game.endDatetime) : null,
+      movesDatetimes: game.movesDatetimes.map(datetime => moment(datetime)),
     }])),
   };
 };
@@ -232,6 +240,9 @@ const createGame = (user, otherUser) => {
     serializedGame: gameGame.serialize(),
     move: gameGame.moveCount,
     chainCount: gameGame.chainCount,
+    startDatetime: moment(),
+    endDatetime: null,
+    movesDatetimes: [],
   };
   console.log('new game', game);
   globalData.games[game.id] = game;
@@ -252,6 +263,7 @@ const submitGameMoves = (user, game, moves) => {
   if (moves === 'resign') {
     const userPlayer = game.userIds[0] === user.id ? Game.PLAYER_A : Game.PLAYER_B;
     const resultingGame = game.game.resign(userPlayer);
+    const now = moment();
     Object.assign(game, {
       game: resultingGame,
       nextUserId: resultingGame.nextPlayer === Game.PLAYER_A ? game.userIds[0] : resultingGame.nextPlayer === Game.PLAYER_B ? game.userIds[1] : null,
@@ -261,6 +273,8 @@ const submitGameMoves = (user, game, moves) => {
       finished: resultingGame.finished,
       winner: resultingGame.winner,
       winnerUserId: resultingGame.winner ? (resultingGame.winner === Game.PLAYER_A ? game.userIds[0] : game.userIds[1]) : null,
+      movesDatetimes: game.movesDatetimes.concat([now]),
+      endDatetime: resultingGame.finished ? now : null,
     });
     saveData();
     console.log("User resigned", {gameId: game.id, userId: user.id});
@@ -296,6 +310,11 @@ const submitGameMoves = (user, game, moves) => {
     return;
   }
 
+  const now = moment();
+  for (const move of moves) {
+    game.movesDatetimes.push(now);
+  }
+
   Object.assign(game, {
     game: resultingGame,
     nextUserId: resultingGame.nextPlayer === Game.PLAYER_A ? game.userIds[0] : resultingGame.nextPlayer === Game.PLAYER_B ? game.userIds[1] : null,
@@ -305,6 +324,7 @@ const submitGameMoves = (user, game, moves) => {
     finished: resultingGame.finished,
     winner: resultingGame.winner,
     winnerUserId: resultingGame.winner ? (resultingGame.winner === Game.PLAYER_A ? game.userIds[0] : game.userIds[1]) : null,
+    endDatetime: resultingGame.finished ? now : null,
   });
   saveData();
   console.log("Made a move on game", game.id, game);
@@ -320,7 +340,14 @@ const emitUsers = (socket = io) => {
 };
 
 const emitGames = (socket = io) => {
-  socket.emit("games", Object.values(globalData.games).map(({id, userIds, finished, winner, winnerUserId, nextUserId, serializedGame: game, move, chainCount}) => ({id, userIds, finished, winner, winnerUserId, nextUserId, game, move, chainCount})));
+  socket.emit("games", Object.values(globalData.games).map(({
+    id, userIds, finished, winner, winnerUserId, nextUserId, serializedGame: game, move, chainCount,
+    startDatetime, endDatetime, movesDatetimes,
+  }) => ({
+    id, userIds, finished, winner, winnerUserId, nextUserId, game, move, chainCount,
+    startDatetime: startDatetime.toISOString(), endDatetime: endDatetime ? endDatetime.toISOString() : null,
+    movesDatetimes: movesDatetimes.map(datetime => datetime.toISOString()),
+  })));
 };
 
 io.on('connection', function(socket){
