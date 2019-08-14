@@ -115,6 +115,7 @@ class Game {
     this.moveType = moveType;
     this.availableMoves = availableMoves;
     this.canUndo = canUndo;
+    this.canTakeMoveBack = !!this.previous;
     this.resignedPlayer = resignedPlayer;
     this.moveNotation = resignedPlayer
       ? this.constructor.RESIGNED_NOTATION[resignedPlayer]
@@ -341,6 +342,14 @@ class Game {
   undo() {
     if (!this.canUndo) {
       throw new Error("Cannot undo");
+    }
+
+    return this.previous;
+  }
+
+  takeMoveBack() {
+    if (!this.canTakeMoveBack) {
+      throw new Error("Cannot take move back");
     }
 
     return this.previous;
