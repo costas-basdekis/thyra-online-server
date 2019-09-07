@@ -18,6 +18,7 @@ const {getInitialData, migrate} = require('./src/migrations');
 const fs = require('fs');
 const _ = require('lodash');
 const moment = require('moment');
+const bcrypt = require('bcrypt');
 
 const minAppVersion = 1;
 
@@ -159,6 +160,12 @@ const renameUser = (user, username) => {
   saveData();
   emitUser(user);
   emitUsers();
+};
+
+const changePassword = async (user, password) => {
+  console.log("Updating password for user", user.name);
+  user.passwordHash = await bcrypt.hash(password, 10);
+  saveData();
 };
 
 const updateUserSettings = (user, settings) => {
@@ -383,6 +390,13 @@ io.on('connection', function(socket){
     }
 
     renameUser(user, username);
+  });
+  socket.on('change-password', async password => {
+    if (!user) {
+      return;
+    }
+
+    await changePassword(user, password);
   });
   socket.on('update-settings', settings => {
     if (!user) {
