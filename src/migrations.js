@@ -102,6 +102,8 @@ migrations.push({
       });
       if (game.finished) {
         game.endDatetime = lastDatetime;
+      } else {
+        game.endDatetime = null;
       }
     }
   },
