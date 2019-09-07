@@ -98,6 +98,7 @@ const createUser = (socket) => {
       id,
       name: `Guest ${id.slice(0, 4)}`,
       token: uuid4(),
+      passwordHash: null,
       online: true,
       readyToPlay: false,
       settings: {

@@ -120,3 +120,14 @@ migrations.push({
     }
   },
 });
+
+migrations.push({
+  fromVersion: 7,
+  toVersion: 8,
+  description: "Add password hash",
+  migrate: data => {
+    for (const user of data.users) {
+      user.passwordHash = null;
+    }
+  },
+});
