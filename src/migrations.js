@@ -108,3 +108,15 @@ migrations.push({
     }
   },
 });
+
+migrations.push({
+  fromVersion: 6,
+  toVersion: 7,
+  description: "Convert password to token",
+  migrate: data => {
+    for (const user of data.users) {
+      user.token = user.password;
+      delete user.password;
+    }
+  },
+});

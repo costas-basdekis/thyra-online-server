@@ -97,7 +97,7 @@ const createUser = (socket) => {
     const user = {
       id,
       name: `Guest ${id.slice(0, 4)}`,
-      password: uuid4().slice(0, 4),
+      token: uuid4().slice(0, 4),
       online: true,
       readyToPlay: false,
       settings: {
@@ -121,9 +121,9 @@ const loadUser = (id, socket) => {
   return user;
 };
 
-const loadOrCreateUser = (id, password, socket) => {
+const loadOrCreateUser = (id, token, socket) => {
   let user, created;
-  if (id && id in globalData.users && globalData.users[id].password === password) {
+  if (id && id in globalData.users && globalData.users[id].token === token) {
     user = loadUser(id, socket);
     console.log('existing user', user);
     created = false;
@@ -331,8 +331,8 @@ const submitGameMoves = (user, game, moves) => {
   emitGames();
 };
 
-const emitUser = ({id, name, password, online, readyToPlay, settings, sockets}) => {
-  sockets.map(socket => socket.emit("user", {id, name, password, online, readyToPlay, settings}));
+const emitUser = ({id, name, token, online, readyToPlay, settings, sockets}) => {
+  sockets.map(socket => socket.emit("user", {id, name, token, online, readyToPlay, settings}));
 };
 
 const emitUsers = (socket = io) => {
@@ -353,7 +353,7 @@ const emitGames = (socket = io) => {
 io.on('connection', function(socket){
   console.log('a user connected');
   let user = null;
-  socket.on('create-user', ({appVersion, id, password} = {}) => {
+  socket.on('create-user', ({appVersion, id, token} = {}) => {
     if (!appVersion) {
       console.log('user has app with no version');
       // Try anyway to make it reload
@@ -374,7 +374,7 @@ io.on('connection', function(socket){
       return;
     }
 
-    [user] = loadOrCreateUser(id, password, socket);
+    [user] = loadOrCreateUser(id, token, socket);
   });
   socket.on('change-username', username => {
     if (!user) {
