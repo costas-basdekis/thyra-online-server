@@ -47,7 +47,7 @@ const loadData = () => {
   const migrated = migrate(dataFromLoad);
   const data = prepareDataFromLoad(dataFromLoad);
   if (migrated) {
-    saveData(dataFromLoad);
+    saveData(data);
   }
   return data;
 };
