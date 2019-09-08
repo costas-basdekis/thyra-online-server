@@ -1,4 +1,4 @@
-const {Game} = require('./game/game');
+const {Game} = require('../game/game');
 const _ = require('lodash');
 const moment = require('moment');
 
