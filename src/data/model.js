@@ -47,6 +47,10 @@ const model = {
       user = model.loadUser(id, socket);
       console.log('existing user', user);
       created = false;
+    } else if (id && id in globalData.mergedUsersMap) {
+      user = model.loadUser(globalData.mergedUsersMap[id], socket);
+      console.log('existing merged user', id, user);
+      created = false;
     } else if (id && name && reUuid4.test(id) && !(id in globalData.users)) {
       user = model.createUser(socket, {id, name});
       console.log('Created user', user);

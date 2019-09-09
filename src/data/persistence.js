@@ -34,6 +34,7 @@ const loadData = () => {
 const prepareDataForSave = data => {
   return {
     version: data.version,
+    mergedUsersMap: data.mergedUsersMap,
     users: Object.values(data.users).map(user => _.omit(user, ['sockets', 'online', 'readyToPlay'])),
     games: Object.values(data.games).map(game => Object.assign(_.omit(game, ['game']), {
       startDatetime: game.startDatetime.toISOString(),
@@ -59,6 +60,7 @@ const prepareDataFromLoad = dataFromLoad => {
 
   const data = {
     version: dataFromLoad.version,
+    mergedUsersMap: dataFromLoad.mergedUsersMap,
     users: _.fromPairs(users.map(user => [user.id, {
       ...user,
       sockets: [],

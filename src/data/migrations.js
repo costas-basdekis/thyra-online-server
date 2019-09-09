@@ -145,3 +145,21 @@ addMigration({
     }
   },
 });
+
+addMigration({
+  description: "Track merged users",
+  migrate: data => {
+    data.mergedUsersMap = {
+      // Brook
+      '99ed3a92-0b1a-44c5-8de2-f70221653167': '525e4e0b-1003-4fd0-acaf-3edd66a6c9c4',
+      // Tom
+      'e21b20ee-2615-491c-8e81-f2b5ce90c4a3': '4c5aeed6-f275-4b8f-9cb5-50000f45b4ca',
+      'b8586d00-bb29-4ab9-9acd-778a311ae257': '4c5aeed6-f275-4b8f-9cb5-50000f45b4ca',
+      // Thanos
+      'cdd922cf-804d-495b-890c-6cdd480ba718': '133acdf2-87f0-40f4-9b6a-cf22d7cc8eab',
+    };
+    for (const game of data.games) {
+      game.userIds = game.userIds.map(id => id in data.mergedUsersMap ? data.mergedUsersMap[id] : id)
+    }
+  },
+});
