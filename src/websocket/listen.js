@@ -37,7 +37,7 @@ class Connection {
     return callback;
   };
 
-  createUser = this.on('create-user', ({appVersion, id, token} = {}) => {
+  createUser = this.on('create-user', ({appVersion, id, username, token} = {}) => {
     if (!appVersion) {
       console.log('user has app with no version');
       // Try anyway to make it reload
@@ -58,7 +58,7 @@ class Connection {
       return;
     }
 
-    [this.user] = model.loadOrCreateUser(id, token, this.socket);
+    [this.user] = model.loadOrCreateUser({id, username, token}, this.socket);
   });
 
   changeUsername = this.on('change-username', username => {

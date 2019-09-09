@@ -5,15 +5,17 @@ const _ = require('lodash');
 const moment = require('moment');
 const bcrypt = require('bcrypt');
 
+const reUuid4 = /[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/;
+
 const model = {
-  createUser: (socket) => {
-    let id = uuid4();
+  createUser: (socket, extraData = {}) => {
+    let id = extraData.id || uuid4();
     while (id in globalData.users) {
       id = uuid4();
     }
     const user = {
       id,
-      name: `Guest ${id.slice(0, 4)}`,
+      name: extraData.name || `Guest ${id.slice(0, 4)}`,
       token: uuid4(),
       passwordHash: null,
       online: true,
@@ -39,12 +41,16 @@ const model = {
     return user;
   },
 
-  loadOrCreateUser: (id, token, socket) => {
+  loadOrCreateUser: ({id, username, token}, socket) => {
     let user, created;
     if (id && id in globalData.users && globalData.users[id].token === token) {
       user = model.loadUser(id, socket);
       console.log('existing user', user);
       created = false;
+    } else if (id && username && reUuid4.test(id) && !(id in globalData.users)) {
+      user = model.createUser(socket, {id, name: username});
+      console.log('Created user', user);
+      created = true;
     } else {
       user = model.createUser(socket);
       console.log('Created user', user);
