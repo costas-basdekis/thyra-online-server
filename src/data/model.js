@@ -112,6 +112,8 @@ const model = {
     console.log("Updating password for user", user.name);
     user.passwordHash = await bcrypt.hash(password, 10);
     saveData();
+    const {emit} = require("../websocket");
+    emit.emitUser(user);
   },
 
   updateUserSettings: (user, settings) => {

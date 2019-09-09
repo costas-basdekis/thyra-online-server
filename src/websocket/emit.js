@@ -5,8 +5,8 @@ const emit = {
     socket.emit('reload');
   },
 
-  emitUser: ({id, name, token, online, readyToPlay, settings, sockets}) => {
-    sockets.map(socket => socket.emit("user", {id, name, token, online, readyToPlay, settings}));
+  emitUser: ({id, name, token, online, readyToPlay, settings, sockets, passwordHash}) => {
+    sockets.map(socket => socket.emit("user", {id, name, token, online, readyToPlay, settings, hasPassword: !!passwordHash}));
   },
 
   emitUsers: (socket = io) => {
