@@ -61,6 +61,16 @@ class Connection {
     [this.user] = model.loadOrCreateUser({id, name, token}, this.socket);
   });
 
+  logIn = this.on('log-in', async ({name, password}) => {
+    const user = await model.logUserIn(name, password, this.socket);
+    if (user) {
+      if (this.user) {
+        model.disconnectOrDeleteUser(this.user, this.socket);
+      }
+      this.user = user;
+    }
+  });
+
   changeUsername = this.on('change-username', username => {
     if (!this.user) {
       return;

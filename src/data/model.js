@@ -69,6 +69,33 @@ const model = {
     return [user, created];
   },
 
+  logUserIn: async (name, password, socket) => {
+    const usersWithName = Object.values(globalData.users).filter(user => user.name === name);
+    if (!usersWithName) {
+      console.log('no user to log in with name', name);
+      return null;
+    }
+    let loggedInUser;
+    for (const user of usersWithName) {
+      if (await bcrypt.compare(password, user.passwordHash)) {
+        loggedInUser = user;
+        break
+      }
+    }
+    if (!loggedInUser) {
+      console.log('no password was correct');
+      return null;
+    }
+    console.log('logged in user', loggedInUser);
+    loggedInUser = model.loadUser(loggedInUser.id, socket);
+    const {emit} = require("../websocket");
+    emit.emitUser(loggedInUser);
+    emit.emitUsers();
+    emit.emitGames(socket);
+
+    return loggedInUser;
+  },
+
   disconnectOrDeleteUser: (user, socket) => {
     const hasGames = !!Object.values(globalData.games).find(game => game.userIds.includes(user.id));
     if (user.passwordHash || hasGames) {
