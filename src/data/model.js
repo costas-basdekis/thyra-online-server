@@ -69,7 +69,7 @@ const model = {
     return [user, created];
   },
 
-  logUserIn: async (name, password, socket) => {
+  logUserIn: async (name, password, mergeUsers, existingUser, socket) => {
     const usersWithName = Object.values(globalData.users).filter(user => user.name === name);
     if (!usersWithName) {
       console.log('no user to log in with name', name);
@@ -87,6 +87,9 @@ const model = {
       return null;
     }
     console.log('logged in user', loggedInUser);
+    if (existingUser && mergeUsers) {
+      model.mergeUsers(existingUser, loggedInUser);
+    }
     loggedInUser = model.loadUser(loggedInUser.id, socket);
     const {emit} = require("../websocket");
     emit.emitUser(loggedInUser);
@@ -94,6 +97,18 @@ const model = {
     emit.emitGames(socket);
 
     return loggedInUser;
+  },
+
+  mergeUsers: (mergedUser, user) => {
+    for (const game of Object.values(globalData.games)) {
+      game.userIds = game.userIds.map(id => id === mergedUser.id ? user.id : id);
+    }
+    delete globalData.users[mergedUser.id];
+    const {emit} = require("../websocket");
+    emit.emitUser(user);
+    emit.emitUser(mergedUser);
+    emit.emitUsers();
+    emit.emitGames();
   },
 
   disconnectOrDeleteUser: (user, socket) => {

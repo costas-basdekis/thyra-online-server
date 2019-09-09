@@ -61,8 +61,8 @@ class Connection {
     [this.user] = model.loadOrCreateUser({id, name, token}, this.socket);
   });
 
-  logIn = this.on('log-in', async ({name, password}) => {
-    const user = await model.logUserIn(name, password, this.socket);
+  logIn = this.on('log-in', async ({name, password, mergeUsers}) => {
+    const user = await model.logUserIn(name, password, mergeUsers, this.socket);
     if (user) {
       if (this.user) {
         model.disconnectOrDeleteUser(this.user, this.socket);
