@@ -131,14 +131,3 @@ migrations.push({
     }
   },
 });
-
-migrations.push({
-  fromVersion: 8,
-  toVersion: 9,
-  description: "Clean up games and users",
-  migrate: data => {
-    data.games = data.games.filter(game => game.move >= 5);
-    const userIdsWithGames = new Set(_.flatten(data.games.map(game => game.userIds)));
-    data.users = data.users.filter(user => userIdsWithGames.has(user.id));
-  },
-});

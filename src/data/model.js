@@ -41,14 +41,14 @@ const model = {
     return user;
   },
 
-  loadOrCreateUser: ({id, username, token}, socket) => {
+  loadOrCreateUser: ({id, name, token}, socket) => {
     let user, created;
     if (id && id in globalData.users && globalData.users[id].token === token) {
       user = model.loadUser(id, socket);
       console.log('existing user', user);
       created = false;
-    } else if (id && username && reUuid4.test(id) && !(id in globalData.users)) {
-      user = model.createUser(socket, {id, name: username});
+    } else if (id && name && reUuid4.test(id) && !(id in globalData.users)) {
+      user = model.createUser(socket, {id, name});
       console.log('Created user', user);
       created = true;
     } else {
@@ -65,6 +65,15 @@ const model = {
     return [user, created];
   },
 
+  disconnectOrDeleteUser: (user, socket) => {
+    const hasGames = !!Object.values(globalData.games).find(game => game.userIds.includes(user.id));
+    if (hasGames) {
+      model.disconnectUser(user, socket);
+    } else {
+      model.deleteUser(user);
+    }
+  },
+
   disconnectUser: (user, socket) => {
     console.log("client disconnected", user.name);
     user.sockets = user.sockets.filter(otherSocket => otherSocket !== socket);
@@ -73,6 +82,14 @@ const model = {
       user.readyToPlay = false;
       console.log("user disconnected", user.name);
     }
+    saveData();
+    const {emit} = require("../websocket");
+    emit.emitUsers();
+  },
+
+  deleteUser: user => {
+    console.log('deleting user', user.name);
+    delete globalData.users[user.id];
     saveData();
     const {emit} = require("../websocket");
     emit.emitUsers();
