@@ -71,7 +71,7 @@ const model = {
 
   disconnectOrDeleteUser: (user, socket) => {
     const hasGames = !!Object.values(globalData.games).find(game => game.userIds.includes(user.id));
-    if (hasGames) {
+    if (user.passwordHash || hasGames) {
       model.disconnectUser(user, socket);
     } else {
       model.deleteUser(user);

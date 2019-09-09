@@ -53,9 +53,9 @@ const prepareDataFromLoad = dataFromLoad => {
   }
   const originalUsersLength = users.length;
   const userIdsWithGames = new Set(_.flatten(games.map(game => game.userIds)));
-  users = users.filter(user => userIdsWithGames.has(user.id));
+  users = users.filter(user => user.passwordHash || userIdsWithGames.has(user.id));
   if (users.length !== originalUsersLength) {
-    console.log('removed', originalUsersLength - users.length, 'users with no games');
+    console.log('removed', originalUsersLength - users.length, 'users with no games and no password');
   }
 
   const data = {
