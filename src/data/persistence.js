@@ -45,29 +45,16 @@ const prepareDataForSave = data => {
 };
 
 const prepareDataFromLoad = dataFromLoad => {
-  let {users, games} = dataFromLoad;
-  const originalGamesLength = games.length;
-  games = games.filter(game => game.move >= 5);
-  if (originalGamesLength !== games.length) {
-    console.log('removed', originalGamesLength - games.length, 'not-started games');
-  }
-  const originalUsersLength = users.length;
-  const userIdsWithGames = new Set(_.flatten(games.map(game => game.userIds)));
-  users = users.filter(user => user.passwordHash || userIdsWithGames.has(user.id));
-  if (users.length !== originalUsersLength) {
-    console.log('removed', originalUsersLength - users.length, 'users with no games and no password');
-  }
-
-  const data = {
+  return {
     version: dataFromLoad.version,
     mergedUsersMap: dataFromLoad.mergedUsersMap,
-    users: _.fromPairs(users.map(user => [user.id, {
+    users: _.fromPairs(dataFromLoad.users.map(user => [user.id, {
       ...user,
       sockets: [],
       online: false,
       readyToPlay: false,
     }])),
-    games: _.fromPairs(games.map(game => [game.id, {
+    games: _.fromPairs(dataFromLoad.games.map(game => [game.id, {
       ...game,
       game: Game.deserialize(game.serializedGame),
       startDatetime: moment(game.startDatetime),
@@ -75,8 +62,6 @@ const prepareDataFromLoad = dataFromLoad => {
       movesDatetimes: game.movesDatetimes.map(datetime => moment(datetime)),
     }])),
   };
-
-  return data;
 };
 
 const globalData = loadData();

@@ -124,4 +124,10 @@ class Connection {
   });
 }
 
-io.on('connection', Connection.connect);
+const listen = () => {
+  io.on('connection', Connection.connect);
+};
+
+module.exports = {
+  listen,
+};

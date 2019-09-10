@@ -1,5 +1,6 @@
 const uuid4 = require('uuid4');
 const {Game} = require('../game/game');
+const services = require('../services');
 const {saveData, globalData} = require("./persistence");
 const _ = require('lodash');
 const moment = require('moment');
@@ -26,6 +27,9 @@ const model = {
         theme: {scheme: '', rotated: false, rounded: false, numbers: ''},
       },
       sockets: [socket],
+      score: 1200,
+      maxScore: 1200,
+      gameCount: 0,
     };
     globalData.users[user.id] = user;
     saveData();
@@ -229,7 +233,8 @@ const model = {
       id = uuid4();
     }
     const gameGame = Game.create();
-    const userIds = _.shuffle([otherUser.id, user.id]);
+    const players = _.shuffle([otherUser, user]);
+    const userIds = players.map(player => player.id);
     const game = {
       id,
       userIds,
@@ -244,6 +249,10 @@ const model = {
       startDatetime: moment(),
       endDatetime: null,
       movesDatetimes: [],
+      initialPlayerA: services.getEloPlayerScoreData(players[0]),
+      initialPlayerB: services.getEloPlayerScoreData(players[1]),
+      resultingPlayerAScore: null,
+      resultingPlayerBScore: null,
     };
     console.log('new game', game);
     globalData.games[game.id] = game;
@@ -262,6 +271,8 @@ const model = {
       console.warn("Game was already finished", game);
       return;
     }
+    const playerA = globalData.users[game.userIds[0]];
+    const playerB = globalData.users[game.userIds[1]];
     if (moves === 'resign') {
       const userPlayer = game.userIds[0] === user.id ? Game.PLAYER_A : Game.PLAYER_B;
       const resultingGame = game.game.resign(userPlayer);
@@ -278,9 +289,8 @@ const model = {
         movesDatetimes: game.movesDatetimes.concat([now]),
         endDatetime: resultingGame.finished ? now : null,
       });
-      saveData();
+      model.updateGameAndUsersAfterEnd(game, playerA, playerB);
       console.log("User resigned", {gameId: game.id, userId: user.id});
-      emit.emitGames();
       return;
     }
     const userPlayer = game.userIds[0] === user.id ? Game.PLAYER_A : Game.PLAYER_B;
@@ -333,9 +343,114 @@ const model = {
       winnerUserId: resultingGame.winner ? (resultingGame.winner === Game.PLAYER_A ? game.userIds[0] : game.userIds[1]) : null,
       endDatetime: resultingGame.finished ? now : null,
     });
-    saveData();
+    if (game.finished) {
+      model.updateGameAndUsersAfterEnd(game, playerA, playerB);
+    } else {
+      saveData();
+      emit.emitGames();
+    }
     console.log("Made a move on game", game.id, game);
+  },
+
+  updateGameAndUsersAfterEnd: (game, playerA, playerB) => {
+    const [newPlayerAScore, newPlayerBScore] = services.scoreGame(
+      game.winnerUserId === playerA.id, game.initialPlayerA, game.initialPlayerB);
+    game.resultingPlayerAScore = newPlayerAScore.score;
+    game.resultingPlayerBScore = newPlayerBScore.score;
+    Object.assign(playerA, newPlayerAScore);
+    Object.assign(playerB, newPlayerBScore);
+    saveData();
+    const {emit} = require("../websocket");
+    emit.emitUser(playerA);
+    emit.emitUser(playerB);
+    emit.emitUsers();
     emit.emitGames();
+  },
+
+  cleanupUsersAndGames: () => {
+    const now = moment();
+    const gamesToRemove = Object.values(globalData.games).filter(game => {
+      if (game.finished) {
+        return false;
+      }
+      if (game.move >= 5) {
+        return false;
+      }
+      const lastDatetime = game.movesDatetimes[game.movesDatetimes.length - 1] || game.startDatetime;
+      const abortDatetime = lastDatetime.add(1, 'day');
+      if (abortDatetime.isAfter(now)) {
+        return false;
+      }
+
+      return true;
+    });
+    if (gamesToRemove.length) {
+      for (const game of gamesToRemove) {
+        delete globalData.games[game.id];
+      }
+      console.log('removed', gamesToRemove.length, 'not-started games');
+    }
+    const userIdsWithGames = new Set(_.flatten(Object.values(globalData.games).map(game => game.userIds)));
+    const usersToRemove = Object.values(globalData.users)
+      .filter(user => {
+        if (user.online) {
+          return false;
+        }
+        if (user.passwordHash) {
+          return false;
+        }
+        if (userIdsWithGames.has(user.id)) {
+          return false;
+        }
+
+        return true;
+      });
+    if (usersToRemove.length) {
+      for (const user of usersToRemove) {
+        delete globalData.users[user.id];
+      }
+      console.log('removed', usersToRemove.length, 'users with no games and no password');
+    }
+
+    const {emit} = require("../websocket");
+    if (gamesToRemove.length) {
+      emit.emitGames();
+    }
+    if (usersToRemove.length) {
+      emit.emitUsers();
+    }
+  },
+
+  resignOldGames: () => {
+    const excludeGames = [
+      '954974e4-f79f-4f84-8bb5-861db846680b',
+    ];
+    const now = moment();
+    const gamesToResign = Object.values(globalData.games).filter(game => {
+      if (game.finished) {
+        return false;
+      }
+      if (game.move < 5) {
+        return false;
+      }
+      const lastDatetime = game.movesDatetimes[game.movesDatetimes.length - 1] || game.startDatetime;
+      const resignDatetime = lastDatetime.add(1, 'day');
+      if (resignDatetime.isAfter(now)) {
+        return false;
+      }
+      if (excludeGames.includes(game.id)) {
+        return false;
+      }
+
+      return true;
+    });
+    if (gamesToResign.length) {
+      for (const game of gamesToResign) {
+        const user = globalData.users[game.nextUserId];
+        model.submitGameMoves(user, game, 'resign');
+      }
+      console.log("Resigned", gamesToResign.length, "games after inactivity");
+    }
   },
 };
 

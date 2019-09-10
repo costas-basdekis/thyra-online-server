@@ -1,7 +1,7 @@
 const emit = require('./emit');
 const {io} = require('./io');
-require('./listen');
+const {listen} = require('./listen');
 
 module.exports = {
-  emit, io,
+  listen, emit, io,
 };
