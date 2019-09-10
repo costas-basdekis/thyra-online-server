@@ -102,6 +102,7 @@ const model = {
   mergeUsers: (mergedUser, user) => {
     for (const game of Object.values(globalData.games)) {
       game.userIds = game.userIds.map(id => id === mergedUser.id ? user.id : id);
+      game.nextUserId = game.nextUserId === mergedUser.id ? user.id : game.nextUserId;
     }
     delete globalData.users[mergedUser.id];
     const {emit} = require("../websocket");

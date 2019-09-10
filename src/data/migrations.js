@@ -160,6 +160,7 @@ addMigration({
     };
     for (const game of data.games) {
       game.userIds = game.userIds.map(id => id in data.mergedUsersMap ? data.mergedUsersMap[id] : id)
+      game.nextUserId = game.nextUserId in data.mergedUsersMap ? data.mergedUsersMap[game.nextUserId] : game.nextUserId;
     }
   },
 });
