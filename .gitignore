@@ -24,4 +24,5 @@ yarn-error.log*
 
 data.json
 data.json.backup
+latestData.json
 logs/
