@@ -68,6 +68,7 @@ class Connection {
         model.disconnectOrDeleteUser(this.user, this.socket);
       }
       this.user = user;
+      emit.emitUser(this.user);
     }
   });
 
