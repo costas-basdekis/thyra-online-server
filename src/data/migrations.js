@@ -166,8 +166,80 @@ addMigration({
 });
 
 addMigration({
-  fromVersion: 10,
-  toVersion: 9,
-  description: "Revert 'Track Elo score'",
-  migrate: data => {},
+  description: "Track Elo score",
+  migrate: data => {
+    // noinspection DuplicatedCode
+    const getEloKFactor = player => {
+      if (player.gameCount < 30 && player.maxScore < 2300) {
+        return 40;
+      }
+      if (player.maxScore < 2400) {
+        return 20;
+      }
+
+      return 10;
+    };
+
+    const getEloExpectedScore = (playerA, playerB) => {
+      return 1 / (1 + 10 ** ((playerB.score - playerA.score) / 400));
+    };
+
+    const scoreGame = (aWon, playerA, playerB) => {
+      const kA = getEloKFactor(playerA);
+      const kB = getEloKFactor(playerB);
+
+      const expectedA = getEloExpectedScore(playerA, playerB);
+      const expectedB = 1 - expectedA;
+      const actualA = aWon ? 1 : 0;
+      const actualB = 1 - actualA;
+
+      const newScoreA = Math.floor(playerA.score + kA * (actualA - expectedA));
+      const newScoreB = Math.floor(playerB.score + kB * (actualB - expectedB));
+
+      const newPlayerA = {
+        score: newScoreA,
+        gameCount: playerA.gameCount + 1,
+        maxScore: Math.max(playerA.score, newScoreA),
+      };
+      const newPlayerB = {
+        score: newScoreB,
+        gameCount: playerB.gameCount + 1,
+        maxScore: Math.max(playerB.score, newScoreB),
+      };
+
+      return [newPlayerA, newPlayerB];
+    };
+
+    for (const user of data.users) {
+      Object.assign(user, {
+        score: 1200,
+        maxScore: 1200,
+        gameCount: 0,
+      });
+    }
+
+    const getEloPlayerScoreData = player => {
+      return _.pick(player, ['id', 'score', 'maxScore', 'gameCount']);
+    };
+
+    const usersById = _.fromPairs(data.users.map(user => [user.id, user]));
+
+    const sortedGames = _.sortBy(data.games, ['startDatetime', 'id']);
+    for (const game of sortedGames) {
+      const [playerAId, playerBId] = game.userIds;
+      const playerA = usersById[playerAId];
+      const playerB = usersById[playerBId];
+      game.initialPlayerA = getEloPlayerScoreData(playerA);
+      game.initialPlayerB = getEloPlayerScoreData(playerB);
+      if (!game.finished) {
+        continue;
+      }
+      const [newPlayerAScore, newPlayerBScore] = scoreGame(
+        game.winnerUserId === playerAId, game.initialPlayerA, game.initialPlayerB);
+      game.resultingPlayerAScore = newPlayerAScore.score;
+      game.resultingPlayerBScore = newPlayerBScore.score;
+      Object.assign(playerA, newPlayerAScore);
+      Object.assign(playerB, newPlayerBScore);
+    }
+  },
 });
