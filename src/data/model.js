@@ -94,6 +94,7 @@ const model = {
     if (existingUser && mergeUsers) {
       model.mergeUsers(existingUser, loggedInUser);
     }
+    model.disconnectUser(existingUser, socket);
     loggedInUser = model.loadUser(loggedInUser.id, socket);
     const {emit} = require("../websocket");
     emit.emitUser(loggedInUser);
