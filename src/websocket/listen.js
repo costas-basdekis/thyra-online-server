@@ -72,6 +72,16 @@ class Connection {
     }
   });
 
+  logOut = this.on('log-out', () => {
+    if (!this.user) {
+      return;
+    }
+
+    model.disconnectOrDeleteUser(this.user, this.socket);
+    this.user = null;
+    [this.user] = model.loadOrCreateUser({}, this.socket);
+  });
+
   changeUsername = this.on('change-username', username => {
     if (!this.user) {
       return;
