@@ -252,3 +252,27 @@ addMigration({
     }
   },
 });
+
+addMigration({
+  description: "Track win count",
+  migrate: data => {
+    for (const user of data.users) {
+      user.winCount = 0;
+    }
+    const usersById = _.fromPairs(data.users.map(user => [user.id, user]));
+    for (const game of data.games) {
+      if (!game.finished) {
+        continue;
+      }
+      let user;
+      if (game.winnerUserId === game.userIds[0]) {
+        user = usersById[game.userIds[0]];
+      } else if (game.winnerUserId === game.userIds[1]) {
+        user = usersById[game.userIds[1]];
+      } else {
+        throw new Error("User not found", game.winnerUserId);
+      }
+      user.winCount += 1;
+    }
+  },
+});

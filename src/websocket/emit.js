@@ -9,7 +9,7 @@ const emit = {
 
   emitUser: (user) => {
     const serializedUser = {
-      ..._.pick(user, ['id', 'name', 'token', 'online', 'readyToPlay', 'settings', 'score']),
+      ..._.pick(user, ['id', 'name', 'token', 'online', 'readyToPlay', 'settings', 'score', 'gameCount', 'winCount']),
       hasPassword: !!user.passwordHash,
       isUserRatingProvisional: services.isUserRatingProvisional(user),
     };
@@ -19,7 +19,7 @@ const emit = {
   emitUsers: (socket = io) => {
     const {persistence: {globalData}} = require("../data");
     socket.emit("users", Object.values(globalData.users).map(user => ({
-      ..._.pick(user, ['id', 'name', 'online', 'readyToPlay', 'score']),
+      ..._.pick(user, ['id', 'name', 'online', 'readyToPlay', 'score', 'gameCount', 'winCount']),
       isUserRatingProvisional: services.isUserRatingProvisional(user),
     })));
   },

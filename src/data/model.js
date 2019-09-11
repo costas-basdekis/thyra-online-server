@@ -30,6 +30,7 @@ const model = {
       score: 1200,
       maxScore: 1200,
       gameCount: 0,
+      winCount: 0,
     };
     globalData.users[user.id] = user;
     saveData();
@@ -354,12 +355,18 @@ const model = {
   },
 
   updateGameAndUsersAfterEnd: (game, playerA, playerB) => {
+    const playerAWon = game.winnerUserId === playerA.id;
     const [newPlayerAScore, newPlayerBScore] = services.scoreGame(
-      game.winnerUserId === playerA.id, game.initialPlayerA, game.initialPlayerB);
+      playerAWon, game.initialPlayerA, game.initialPlayerB);
     game.resultingPlayerAScore = newPlayerAScore.score;
     game.resultingPlayerBScore = newPlayerBScore.score;
     Object.assign(playerA, newPlayerAScore);
     Object.assign(playerB, newPlayerBScore);
+    if (playerAWon) {
+      playerA.winCount += 1;
+    } else {
+      playerB.winCount += 1;
+    }
     saveData();
     const {emit} = require("../websocket");
     emit.emitUser(playerA);
