@@ -243,3 +243,12 @@ addMigration({
     }
   },
 });
+
+addMigration({
+  description: "Fix game.winnerUserId",
+  migrate: data => {
+    for (const game of data.games) {
+      game.winnerUserId = game.winnerUserId in data.mergedUsersMap ? data.mergedUsersMap[game.winnerUserId] : game.winnerUserId;
+    }
+  },
+});
