@@ -430,9 +430,6 @@ const model = {
   },
 
   resignOldGames: () => {
-    const excludeGames = [
-      '954974e4-f79f-4f84-8bb5-861db846680b',
-    ];
     const now = moment();
     const gamesToResign = Object.values(globalData.games).filter(game => {
       if (game.finished) {
@@ -444,9 +441,6 @@ const model = {
       const lastDatetime = game.movesDatetimes[game.movesDatetimes.length - 1] || game.startDatetime;
       const resignDatetime = lastDatetime.add(1, 'day');
       if (resignDatetime.isAfter(now)) {
-        return false;
-      }
-      if (excludeGames.includes(game.id)) {
         return false;
       }
 
