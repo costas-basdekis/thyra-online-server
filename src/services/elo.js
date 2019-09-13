@@ -19,7 +19,11 @@ const getEloExpectedScore = (playerA, playerB) => {
   return 1 / (1 + 10 ** ((playerB.score - playerA.score) / 400));
 };
 
-const scoreGame = (aWon, playerA, playerB) => {
+const equalRound = number => {
+  return Math.sign(number) * Math.round(Math.abs(number))
+};
+
+const getScoreDifferences = (aWon, playerA, playerB) => {
   const kA = getEloKFactor(playerA);
   const kB = getEloKFactor(playerB);
 
@@ -28,25 +32,44 @@ const scoreGame = (aWon, playerA, playerB) => {
   const actualA = aWon ? 1 : 0;
   const actualB = 1 - actualA;
 
-  const newScoreA = Math.floor(playerA.score + kA * (actualA - expectedA));
-  const newScoreB = Math.floor(playerB.score + kB * (actualB - expectedB));
+  const scoreDifferenceA = equalRound(kA * (actualA - expectedA));
+  const scoreDifferenceB = equalRound(kB * (actualB - expectedB));
+  return [scoreDifferenceA, scoreDifferenceB];
+};
+
+const scoreGame = (aWon, initialPlayerA, initialPlayerB, playerA, playerB) => {
+  const newScoreA = playerA.score + (aWon ? initialPlayerA.winPoints : initialPlayerA.losePoints);
+  const newScoreB = playerB.score + (aWon ? initialPlayerB.losePoints : initialPlayerB.winPoints);
 
   const newPlayerA = {
     score: newScoreA,
     gameCount: playerA.gameCount + 1,
+    winCount: playerA.winCount + (aWon ? 1 : 0),
     maxScore: Math.max(playerA.score, newScoreA),
   };
   const newPlayerB = {
     score: newScoreB,
     gameCount: playerB.gameCount + 1,
+    winCount: playerB.winCount + (aWon ? 0 : 1),
     maxScore: Math.max(playerB.score, newScoreB),
   };
+  const newGame = {
+      resultingPlayerAScore: newPlayerA.score,
+      resultingPlayerBScore: newPlayerB.score,
+      resultingPlayerAScoreDifference: newPlayerA.score - playerA.score,
+      resultingPlayerBScoreDifference: newPlayerB.score - playerB.score,
+  };
 
-  return [newPlayerA, newPlayerB];
+  return [newPlayerA, newPlayerB, newGame];
 };
 
-const getEloPlayerScoreData = player => {
-  return _.pick(player, ['id', 'score', 'maxScore', 'gameCount']);
+const getEloPlayerScoreData = (player, otherPlayer) => {
+  const [winPoints] = getScoreDifferences(true, player, otherPlayer);
+  const [losePoints] = getScoreDifferences(false, player, otherPlayer);
+  return {
+    ..._.pick(player, ['id', 'score', 'maxScore', 'gameCount']),
+    winPoints, losePoints,
+  };
 };
 
 module.exports = {

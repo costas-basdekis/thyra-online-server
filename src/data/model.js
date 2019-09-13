@@ -251,10 +251,12 @@ const model = {
       startDatetime: moment(),
       endDatetime: null,
       movesDatetimes: [],
-      initialPlayerA: services.getEloPlayerScoreData(players[0]),
-      initialPlayerB: services.getEloPlayerScoreData(players[1]),
+      initialPlayerA: services.getEloPlayerScoreData(players[0], players[1]),
+      initialPlayerB: services.getEloPlayerScoreData(players[1], players[0]),
       resultingPlayerAScore: null,
       resultingPlayerBScore: null,
+      resultingPlayerAScoreDifference: null,
+      resultingPlayerBScoreDifference: null,
     };
     console.log('new game', game);
     globalData.games[game.id] = game;
@@ -362,17 +364,11 @@ const model = {
 
   updateGameAndUsersAfterEnd: (game, playerA, playerB) => {
     const playerAWon = game.winnerUserId === playerA.id;
-    const [newPlayerAScore, newPlayerBScore] = services.scoreGame(
+    const [newPlayerAScore, newPlayerBScore, newGame] = services.scoreGame(
       playerAWon, game.initialPlayerA, game.initialPlayerB);
-    game.resultingPlayerAScore = newPlayerAScore.score;
-    game.resultingPlayerBScore = newPlayerBScore.score;
+    Object.assign(game, newGame);
     Object.assign(playerA, newPlayerAScore);
     Object.assign(playerB, newPlayerBScore);
-    if (playerAWon) {
-      playerA.winCount += 1;
-    } else {
-      playerB.winCount += 1;
-    }
     saveData();
     const {emit} = require("../websocket");
     emit.emitUser(playerA);
