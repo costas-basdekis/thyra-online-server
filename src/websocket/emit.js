@@ -1,6 +1,7 @@
 const {io} = require('./io');
 const _ = require('lodash');
 const services = require('../services');
+const {model} = require('../data');
 
 const emit = {
   askUserToReload: socket => {
@@ -35,6 +36,7 @@ const emit = {
       startDatetime: game.startDatetime.toISOString(),
       endDatetime: game.endDatetime ? game.endDatetime.toISOString() : null,
       movesDatetimes: game.movesDatetimes.map(datetime => datetime.toISOString()),
+      tooShortToResign: model.isGameTooShortToResign(game),
     })));
   },
 };

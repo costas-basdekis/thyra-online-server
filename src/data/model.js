@@ -377,10 +377,14 @@ const model = {
     emit.emitGames();
   },
 
+  isGameTooShortToResign: game => {
+    return game.move < 5;
+  },
+
   cleanupUsersAndGames: () => {
     const now = moment();
     const gamesToRemove = Object.values(globalData.games).filter(game => {
-      if (game.move >= 5) {
+      if (!model.isGameTooShortToResign(game)) {
         return false;
       }
       const lastDatetime = game.movesDatetimes[game.movesDatetimes.length - 1] || game.startDatetime;
@@ -434,7 +438,7 @@ const model = {
       if (game.finished) {
         return false;
       }
-      if (game.move < 5) {
+      if (model.isGameTooShortToResign(game)) {
         return false;
       }
       const lastDatetime = game.movesDatetimes[game.movesDatetimes.length - 1] || game.startDatetime;
