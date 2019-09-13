@@ -276,6 +276,12 @@ const model = {
     const playerA = globalData.users[game.userIds[0]];
     const playerB = globalData.users[game.userIds[1]];
     if (moves === 'resign') {
+      if (game.move < 5) {
+        console.log("User aborted game", {gameId: game.id, userId: user.id});
+        delete globalData.games[game.id];
+        emit.emitGames();
+        return;
+      }
       const userPlayer = game.userIds[0] === user.id ? Game.PLAYER_A : Game.PLAYER_B;
       const resultingGame = game.game.resign(userPlayer);
       const now = moment();
