@@ -378,9 +378,6 @@ const model = {
   cleanupUsersAndGames: () => {
     const now = moment();
     const gamesToRemove = Object.values(globalData.games).filter(game => {
-      if (game.finished) {
-        return false;
-      }
       if (game.move >= 5) {
         return false;
       }
