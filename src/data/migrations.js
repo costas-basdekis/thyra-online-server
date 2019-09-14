@@ -387,3 +387,18 @@ addMigration({
     }
   },
 });
+
+addMigration({
+  description: "Update user settings",
+  migrate: data => {
+    for (const user of data.users) {
+      user.settings = {
+        ...user.settings,
+        theme: {
+          ..._.omit(user.settings.theme, ['rotated', 'rounded']),
+          pieces: 'king', rotateOpponent: true,
+        },
+      };
+    }
+  },
+});

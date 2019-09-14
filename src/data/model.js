@@ -24,7 +24,7 @@ const model = {
       settings: {
         autoSubmitMoves: false,
         enableNotifications: false,
-        theme: {scheme: '', rotated: false, rounded: false, numbers: ''},
+        theme: {pieces: 'king', scheme: '', rotateOpponent: true, numbers: ''},
       },
       sockets: [socket],
       score: 1200,
