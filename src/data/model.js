@@ -21,7 +21,7 @@ const model = {
       passwordHash: null,
       online: true,
       readyToPlay: false,
-      settings: {
+      settings: extraData.settings || {
         autoSubmitMoves: false,
         enableNotifications: false,
         theme: {pieces: 'king', scheme: '', rotateOpponent: true, numbers: ''},
@@ -46,7 +46,7 @@ const model = {
     return user;
   },
 
-  loadOrCreateUser: ({id, name, token}, socket) => {
+  loadOrCreateUser: ({id, name, token, settings}, socket) => {
     let user, created;
     if (id && id in globalData.users && globalData.users[id].token === token) {
       user = model.loadUser(id, socket);
@@ -57,11 +57,11 @@ const model = {
       console.log('existing merged user', id, user);
       created = false;
     } else if (id && name && reUuid4.test(id) && !(id in globalData.users)) {
-      user = model.createUser(socket, {id, name});
+      user = model.createUser(socket, {id, name, settings});
       console.log('Created user', user);
       created = true;
     } else {
-      user = model.createUser(socket);
+      user = model.createUser(socket, {name, settings});
       console.log('Created user', user);
       created = true;
     }
