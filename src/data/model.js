@@ -366,7 +366,7 @@ const model = {
   updateGameAndUsersAfterEnd: (game, playerA, playerB) => {
     const playerAWon = game.winnerUserId === playerA.id;
     const [newPlayerAScore, newPlayerBScore, newGame] = services.scoreGame(
-      playerAWon, game.initialPlayerA, game.initialPlayerB);
+      playerAWon, game.initialPlayerA, game.initialPlayerB, playerA, playerB);
     Object.assign(game, newGame);
     Object.assign(playerA, newPlayerAScore);
     Object.assign(playerB, newPlayerBScore);
