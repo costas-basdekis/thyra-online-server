@@ -230,13 +230,25 @@ const model = {
     emit.emitUsers();
   },
 
+  getGamePlayersStartingOrder: ([playerA, playerB]) => {
+    const lastMatch = _.orderBy(
+      Object.values(globalData.games),
+      [game => game.startDatetime.toISOString(), 'id'], ['desc', 'desc'])
+      .find(game => game.userIds.includes(playerA.id) && game.userIds.includes(playerB.id));
+    if (lastMatch) {
+      return [globalData.users[lastMatch.userIds[1]], globalData.users[lastMatch.userIds[0]]];
+    }
+
+    return _.shuffle([playerA, playerB]);
+  },
+
   createGame: (user, otherUser) => {
     let id = uuid4();
     while (id in globalData.games) {
       id = uuid4();
     }
     const gameGame = Game.create();
-    const players = _.shuffle([otherUser, user]);
+    const players = model.getGamePlayersStartingOrder([otherUser, user]);
     const userIds = players.map(player => player.id);
     const game = {
       id,
