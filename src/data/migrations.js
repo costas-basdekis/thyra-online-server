@@ -402,3 +402,18 @@ addMigration({
     }
   },
 });
+
+addMigration({
+  description: "More user settings",
+  migrate: data => {
+    for (const user of data.users) {
+      user.settings = {
+        ...user.settings,
+        theme: {
+          ...user.settings.theme,
+          animations: true, arrows: true,
+        },
+      };
+    }
+  },
+});
