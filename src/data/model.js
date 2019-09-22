@@ -24,7 +24,7 @@ const model = {
       settings: extraData.settings || {
         autoSubmitMoves: false,
         enableNotifications: false,
-        theme: {pieces: 'king', scheme: '', rotateOpponent: true, numbers: '', animations: true, arrows: true},
+        theme: {pieces: 'king', scheme: '', rotateOpponent: true, numbers: 'obvious', animations: true, arrows: true},
       },
       sockets: [socket],
       score: 1200,
