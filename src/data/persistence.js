@@ -41,6 +41,12 @@ const prepareDataForSave = data => {
       endDatetime: game.endDatetime ? game.endDatetime.toISOString() : null,
       movesDatetimes: game.movesDatetimes.map(datetime => datetime.toISOString()),
     })),
+    tournaments: Object.values(data.tournaments).map(tournament => ({
+      ...tournament,
+      startDatetime: tournament.startDatetime ? tournament.startDatetime.toISOString() : null,
+      endDatetime: tournament.endDatetime ? tournament.endDatetime.toISOString() : null,
+      createdDatetime: tournament.createdDatetime.toISOString(),
+    })),
   };
 };
 
@@ -60,6 +66,12 @@ const prepareDataFromLoad = dataFromLoad => {
       startDatetime: moment(game.startDatetime),
       endDatetime: game.endDatetime ? moment(game.endDatetime) : null,
       movesDatetimes: game.movesDatetimes.map(datetime => moment(datetime)),
+    }])),
+    tournaments: _.fromPairs(dataFromLoad.tournaments.map(tournament => [tournament.id, {
+      ...tournament,
+      startDatetime: tournament.startDatetime ? moment(tournament.startDatetime) : null,
+      endDatetime: tournament.endDatetime ? moment(tournament.endDatetime) : null,
+      createdDatetime: moment(tournament.createdDatetime),
     }])),
   };
 };

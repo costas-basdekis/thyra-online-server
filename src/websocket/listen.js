@@ -51,14 +51,13 @@ class Connection {
       this.user = null;
       return;
     }
-    if (this.user) {
-      emit.emitUser(this.user);
-      emit.emitUsers(this.socket);
-      emit.emitGames(this.socket);
-      return;
+    if (!this.user) {
+      [this.user] = model.loadOrCreateUser({id, name, token, settings}, this.socket);
     }
-
-    [this.user] = model.loadOrCreateUser({id, name, token, settings}, this.socket);
+    emit.emitUser(this.user);
+    emit.emitUsers(this.socket);
+    emit.emitGames(this.socket);
+    emit.emitTournaments(this.socket);
   });
 
   logIn = this.on('log-in', async ({name, password, mergeUsers}) => {
@@ -125,6 +124,46 @@ class Connection {
     }
 
     model.submitGameMoves(this.user, game, moves);
+  });
+
+  createTournament = this.on('create-tournament', data => {
+    if (!this.user) {
+      return;
+    }
+
+    model.createTournament(this.user, data);
+  });
+
+  joinTournament = this.on('join-tournament', tournamentId => {
+    if (!this.user) {
+      return;
+    }
+
+    model.joinTournament(this.user, tournamentId);
+  });
+
+  leaveTournament = this.on('leave-tournament', tournamentId => {
+    if (!this.user) {
+      return;
+    }
+
+    model.leaveTournament(this.user, tournamentId);
+  });
+
+  startTournament = this.on('start-tournament', tournamentId => {
+    if (!this.user) {
+      return;
+    }
+
+    model.startTournament(this.user, tournamentId);
+  });
+
+  abortTournament = this.on('abort-tournament', tournamentId => {
+    if (!this.user) {
+      return;
+    }
+
+    model.abortTournament(this.user, tournamentId);
   });
 
   disconnect = this.on('disconnect', () => {

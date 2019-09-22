@@ -417,3 +417,21 @@ addMigration({
     }
   },
 });
+
+addMigration({
+  // fromVersion: 16,
+  // toVersion: 16,
+  description: "Add tournaments",
+  migrate: data => {
+    data.tournaments = [];
+    for (const game of data.games) {
+      game.tournamentId = null;
+    }
+    for (const user of data.users) {
+      Object.assign(user, {
+        tournamentCount: 0,
+        tournamentWinCount: 0,
+      });
+    }
+  },
+});
