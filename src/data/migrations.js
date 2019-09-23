@@ -419,8 +419,6 @@ addMigration({
 });
 
 addMigration({
-  // fromVersion: 16,
-  // toVersion: 16,
   description: "Add tournaments",
   migrate: data => {
     data.tournaments = [];
