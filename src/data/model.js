@@ -119,6 +119,11 @@ const model = {
         : tournament.userIds;
       tournament.creatorUserId = tournament.creatorUserId === mergedUser.id ? user.id : tournament.creatorUserId;
       tournament.winnerUserId = tournament.winnerUserId === mergedUser.id ? user.id : tournament.winnerUserId;
+      for (const round of tournament.schedule) {
+        for (const pairing of round.pairings) {
+          pairing.userIds = pairing.userIds.map(userId => userId === mergedUser.id ? user.id : userId);
+        }
+      }
     }
     delete globalData.users[mergedUser.id];
     const {emit} = require("../websocket");
