@@ -367,55 +367,13 @@ class Game {
   }
 
   serialize() {
-    return this.serializeCompact();
-  }
-
-  serializeCompact() {
     return {
       moves: this.moves,
     };
   }
 
-  serializeVerbose() {
-    return {
-      rowsAndColumns: this.rowsAndColumns,
-      status: {
-        nextPlayer: this.nextPlayer,
-        moveType: this.moveType,
-        availableMovesMatrix: this.availableMovesMatrix,
-        canUndo: this.canUndo,
-        resignedPlayer: this.resignedPlayer,
-      },
-      previous: this.previous ? this.previous.serialize() : null,
-      lastMove: this.lastMove,
-      isNextMove: this.isNextMove,
-    };
-  }
-
-  static deserialize(serialized) {
-    if (serialized.moves) {
-      return this.deserializeCompact(serialized);
-    } else {
-      return this.deserializeVerbose(serialized);
-    }
-  }
-
-  static deserializeCompact({moves, useCheck = false}) {
+  static deserialize({moves, useCheck = false}) {
     return this.fromMoves(moves, useCheck);
-  }
-
-  static deserializeVerbose({cells, rowsAndColumns, status, previous, lastMove, isNextMove}) {
-    if (previous) {
-      previous = this.deserialize(previous);
-    }
-    // TODO: Remove `cells` after deploying
-    if (!rowsAndColumns) {
-      rowsAndColumns = this.ROWS.map(y => ({
-        y,
-        cells: this.COLUMNS.map(x => cells[y][x]),
-      }));
-    }
-    return new this(rowsAndColumns, status, previous, lastMove, isNextMove);
   }
 
   static getInitialRowsAndColumns() {
