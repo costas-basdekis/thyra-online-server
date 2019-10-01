@@ -473,3 +473,12 @@ addMigration({
     }
   },
 });
+
+addMigration({
+  description: "Remove `useCheck`",
+  migrate: data => {
+    for (const game of data.games) {
+      delete game.serializedGame.useCheck;
+    }
+  },
+});

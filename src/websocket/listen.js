@@ -3,7 +3,7 @@ const {io} = require('./io');
 
 let {model, globalData} = {};
 
-const minAppVersion = 3;
+const minAppVersion = 4;
 
 class Connection {
   static connect = socket => {
