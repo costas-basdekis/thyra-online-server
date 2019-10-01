@@ -25,6 +25,7 @@ class Game {
   static MOVE_TYPE_MOVE_SECOND_WORKER = 'move-second-worker';
   static MOVE_TYPE_BUILD_AROUND_WORKER = 'build-around-worker';
 
+  static MOVE_TYPES_START_OF_TURN = [this.MOVE_TYPE_PLACE_FIRST_WORKER, this.MOVE_TYPE_SELECT_WORKER_TO_MOVE];
   static MOVE_TYPES_PLACE_WORKER = [this.MOVE_TYPE_PLACE_FIRST_WORKER, this.MOVE_TYPE_PLACE_SECOND_WORKER];
   static MOVE_TYPES_MOVE_WORKER = [this.MOVE_TYPE_MOVE_FIRST_WORKER, this.MOVE_TYPE_MOVE_SECOND_WORKER];
   static MOVE_TYPES_MOVE_OR_BUILD = [...this.MOVE_TYPES_MOVE_WORKER, this.MOVE_TYPE_BUILD_AROUND_WORKER];
@@ -369,10 +370,11 @@ class Game {
   serialize() {
     return {
       moves: this.moves,
+      useCheck: this.useCheck,
     };
   }
 
-  static deserialize({moves, useCheck = false}) {
+  static deserialize({moves, useCheck}) {
     return this.fromMoves(moves, useCheck);
   }
 

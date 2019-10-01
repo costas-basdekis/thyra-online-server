@@ -433,3 +433,43 @@ addMigration({
     }
   },
 });
+
+addMigration({
+  description: "Use check for winning",
+  migrate: data => {
+    for (const game of data.games) {
+      game.serializedGame.useCheck = true;
+      let gameGame;
+      try {
+        gameGame = Game.deserialize(game.serializedGame);
+        continue;
+      } catch (e) {
+      }
+      let moves = game.serializedGame.moves.slice();
+      while (moves.length) {
+        moves = moves.slice(0, moves.length - 1);
+        try {
+          gameGame = Game.deserialize({...game.serializedGame, moves});
+          if (Game.MOVE_TYPES_START_OF_TURN.includes(gameGame.moveType)) {
+            break;
+          }
+        } catch (e) {
+        }
+      }
+      console.log('Game', game.id, 'had', game.serializedGame.moves.length - moves.length, 'moves removed');
+      if (!gameGame.finished) {
+        moves = moves.concat([{resign: gameGame.nextPlayer}]);
+        gameGame = Game.deserialize({...game.serializedGame, moves});
+        console.log('Game', game.id, 'had player resigned instead of making illegal move');
+      }
+      const winner = gameGame.winner;
+      const expectedWinner = game.winnerUserId;
+      const gameWinner = {[Game.PLAYER_A]: game.userIds[0], [Game.PLAYER_B]: game.userIds[1]}[winner];
+      if (expectedWinner === gameWinner) {
+        game.serializedGame.moves = moves;
+        continue;
+      }
+      throw new Error(`Game ${game.id}, cannot use check: unexpected winner`);
+    }
+  },
+});
