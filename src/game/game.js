@@ -127,9 +127,9 @@ class Game {
             resignedPlayer: null,
           };
         } else {
-          const playerAFirstWorker = this.findCell(
+          const playerAFirstWorker = this.findCell(rowsAndColumns,
             cell => cell.player === this.PLAYER_A && cell.worker === this.WORKER_FIRST);
-          const playerASecondWorker = this.findCell(
+          const playerASecondWorker = this.findCell(rowsAndColumns,
             cell => cell.player === this.PLAYER_A && cell.worker === this.WORKER_SECOND);
           if (!playerAFirstWorker || !playerASecondWorker) {
             throw new Error(`Could not find both workers of player A`);
@@ -155,9 +155,9 @@ class Game {
             resignedPlayer: null,
           };
         } else {
-          const playerBFirstWorker = this.findCell(
+          const playerBFirstWorker = this.findCell(rowsAndColumns,
             cell => cell.player === this.PLAYER_B && cell.worker === this.WORKER_FIRST);
-          const playerBSecondWorker = this.findCell(
+          const playerBSecondWorker = this.findCell(rowsAndColumns,
             cell => cell.player === this.PLAYER_B && cell.worker === this.WORKER_SECOND);
           if (!playerBFirstWorker || !playerBSecondWorker) {
             throw new Error(`Could not find both workers of player B`);
@@ -260,6 +260,15 @@ class Game {
     return this.fromPosition(rowsAndColumns);
   }
 
+  static isValidCompressedPositionNotation(notation) {
+    try {
+      this.fromCompressedPositionNotation(notation);
+      return true;
+    } catch(e) {
+      return false;
+    }
+  }
+
   static fromPosition(rowsAndColumns) {
     let playerACount = 0, playerBCount = 0;
     for (const x of this.ROWS) {
@@ -300,6 +309,9 @@ class Game {
     this.chainCount = this.previous ? this.previous.chainCount + 1 : 0;
     this.lastMove = lastMove ? lastMove : (status.resignedPlayer ? {resign: status.resignedPlayer} : lastMove);
     this.moves = this.previous ? this.previous.moves.concat([this.lastMove]) : [];
+    this.lastMovesInHistory = this.fullHistory
+      .slice(this.fullHistory.indexOf(this.previousInHistory) + 1)
+      .map(game => game.lastMove);
 
     this.rowsAndColumns = rowsAndColumns;
 
