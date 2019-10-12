@@ -1,4 +1,5 @@
 const _ = require('lodash');
+const chalk = require('chalk');
 
 class InvalidMoveError extends Error {}
 
