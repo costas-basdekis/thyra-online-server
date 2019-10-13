@@ -58,6 +58,7 @@ class Connection {
     emit.emitUsers(this.socket);
     emit.emitGames(this.socket);
     emit.emitTournaments(this.socket);
+    emit.emitChallenges(this.socket);
   });
 
   logIn = this.on('log-in', async ({name, password, mergeUsers}) => {
@@ -164,6 +165,14 @@ class Connection {
     }
 
     model.abortTournament(this.user, tournamentId);
+  });
+
+  createChallenge = this.on('create-challenge', challenge => {
+    if (!this.user) {
+      return;
+    }
+
+    model.createChallenge(this.user, challenge);
   });
 
   disconnect = this.on('disconnect', () => {

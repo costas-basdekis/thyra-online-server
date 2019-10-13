@@ -482,3 +482,10 @@ addMigration({
     }
   },
 });
+
+addMigration({
+  description: "Add challenges",
+  migrate: data => {
+    data.challenges = [];
+  },
+});

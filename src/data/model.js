@@ -780,6 +780,152 @@ const model = {
     emit.emitTournaments();
   },
 
+  createChallenge: (user, challenge) => {
+    if (!challenge.options) {
+      console.log('invalid challenge: no `options`');
+      return;
+    }
+    if (!['mate'].includes(challenge.options.type)) {
+      console.log(`invalid challenge: unknown \`options.type\` of \`${challenge.options.type}\``);
+      return;
+    }
+    if (!challenge.options.typeOptions) {
+      console.log('invalid challenge: no `options.typeOptions`');
+      return;
+    }
+    if (challenge.options.type === 'mate') {
+      if (typeof challenge.options.typeOptions.mateIn !== typeof 1 || isNaN(challenge.options.typeOptions.mateIn)) {
+        console.log('invalid challenge: `options.typeOptions.mateIn` is not a number');
+        return;
+      }
+      if (parseInt(challenge.options.typeOptions.mateIn, 10) !== challenge.options.typeOptions.mateIn) {
+        console.log('invalid challenge: `options.typeOptions.mateIn` is not an integer');
+        return
+      }
+      if (challenge.options.typeOptions.mateIn < 1 || challenge.options.typeOptions.mateIn > 10) {
+        console.log('invalid challenge: `options.typeOptions.mateIn` is out of range');
+        return;
+      }
+    }
+    if (!Game.PLAYERS.includes(challenge.options.initialPlayer)) {
+      console.log('invalid challenge: `challenge.initialPlayer` is not player A or B');
+      return;
+    }
+    if (typeof challenge.meta.difficulty !== typeof 1 || isNaN(challenge.meta.difficulty)) {
+      console.log('invalid challenge: `meta.difficulty` is not a number');
+      return;
+    }
+    if (parseInt(challenge.meta.difficulty, 10) !== challenge.meta.difficulty) {
+      console.log('invalid challenge: `meta.difficulty` is not an integer');
+      return;
+    }
+    if (typeof challenge.meta.source !== typeof '') {
+      console.log('invalid challenge: `meta.source` is not a string');
+      return;
+    }
+    if (challenge.meta.difficulty < 1 || challenge.meta.difficulty > 5) {
+      console.log('invalid challenge: `meta.difficulty` is out of range');
+      return;
+    }
+    if (challenge.meta.maxDifficulty !== 5) {
+      console.log('invalid challenge: `meta.maxDifficulty` is not 5');
+      return;
+    }
+    if (!challenge.startingPosition) {
+      console.log('invalid challenge: `startingPosition` is missing');
+      return;
+    }
+    const validatePositions = [[challenge.startingPosition, null, 'playerResponses']];
+    while (validatePositions.length) {
+      const [position, previousGame, positionType] = validatePositions.shift();
+      if (!Game.isValidCompressedPositionNotation(position.position)) {
+        console.log('invalid challenge: position has not valid `position`');
+        return;
+      }
+      let game;
+      if (!previousGame) {
+        game = Game.fromCompressedPositionNotation(position.position);
+      } else {
+        try {
+          game = previousGame.makeMoves(position.moves);
+        } catch (e) {
+          console.log('invalid challenge: moves are invalid');
+          return;
+        }
+        if (game.moveCount !== previousGame.moveCount + 1) {
+          console.log('invalid challenge: too many or too few moves');
+          return;
+        }
+        if (game.nextPlayer === previousGame.nextPlayer) {
+          console.log('invalid challenge: too many or too few moves');
+          return;
+        }
+        if (game.positionNotation !== position.position) {
+          console.log('invalid challenge: position notation does\'t match moves');
+          return;
+        }
+      }
+      if (positionType === 'playerResponses') {
+        if (!Array.isArray(position.playerResponses)) {
+          console.log('invalid challenge: player response position doesn\'t have player responses');
+          return;
+        }
+        for (const nextPosition of position.playerResponses) {
+          validatePositions.push([nextPosition, game, 'challengeResponse']);
+        }
+      } else {
+        if (position.challengeResponse) {
+          validatePositions.push([position.challengeResponse, game, 'playerResponses']);
+        } else if (position.challengeResponse !== null) {
+          console.log('invalid challenge: challenge response position doesn\'t have challenge response field');
+          return;
+        }
+      }
+    }
+
+    const cleanPosition = (position, positionType) => {
+      if (positionType === 'playerResponses') {
+        return {
+          ..._.pick(position, ['position', 'moves']),
+          playerResponses: position.playerResponses.map(nextPosition => cleanPosition(nextPosition, 'challengeResponse')),
+        };
+      } else {
+        return {
+          ..._.pick(position, ['position', 'moves']),
+          challengeResponse: position.challengeResponse
+            ? cleanPosition(position.challengeResponse, 'playerResponses')
+            : null,
+        };
+      }
+    };
+
+    let id = uuid4();
+    while (id in globalData.challenges) {
+      id = uuid4();
+    }
+    const cleanedChallenge = {
+      id,
+      userId: user.id,
+      options: {
+        ..._.pick(challenge.options, ['initialPlayer', 'type', ]),
+        typeOptions: _.pick(challenge.options.typeOptions, ['mateIn']),
+      },
+      meta: {
+        ..._.pick(challenge.meta, ['source', 'difficulty', 'maxDifficulty']),
+        createdDatetime: moment(),
+      },
+      startingPosition: cleanPosition(challenge.startingPosition, 'playerResponses'),
+    };
+
+    console.log('new challenge', _.pick(cleanedChallenge, ['id', 'userId']));
+    globalData.challenges[cleanedChallenge.id] = cleanedChallenge;
+    saveData();
+    const {emit} = require("../websocket");
+    emit.emitChallenges();
+
+    return cleanedChallenge;
+  },
+
   cleanupUsersAndGames: () => {
     const now = moment();
     const gamesToRemove = Object.values(globalData.games).filter(game => {

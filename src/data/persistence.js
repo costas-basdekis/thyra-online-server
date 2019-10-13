@@ -47,6 +47,13 @@ const prepareDataForSave = data => {
       endDatetime: tournament.endDatetime ? tournament.endDatetime.toISOString() : null,
       createdDatetime: tournament.createdDatetime.toISOString(),
     })),
+    challenges: Object.values(data.challenges).map(challenge => ({
+      ...challenge,
+      meta: {
+        ...challenge.meta,
+        createdDatetime: challenge.meta.createdDatetime.toISOString(),
+      },
+    })),
   };
 };
 
@@ -72,6 +79,13 @@ const prepareDataFromLoad = dataFromLoad => {
       startDatetime: tournament.startDatetime ? moment(tournament.startDatetime) : null,
       endDatetime: tournament.endDatetime ? moment(tournament.endDatetime) : null,
       createdDatetime: moment(tournament.createdDatetime),
+    }])),
+    challenges: _.fromPairs(dataFromLoad.challenges.map(challenge => [challenge.id, {
+      ...challenge,
+      meta: {
+        ...challenge.meta,
+        createdDatetime: moment(challenge.meta.createdDatetime),
+      },
     }])),
   };
 };
