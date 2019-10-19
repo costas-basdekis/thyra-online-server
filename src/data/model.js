@@ -78,8 +78,9 @@ const model = {
   },
 
   logUserIn: async (name, password, mergeUsers, existingUser, socket) => {
+    console.log('trying to log user in', name);
     const usersWithName = Object.values(globalData.users).filter(user => user.name === name);
-    if (!usersWithName) {
+    if (!usersWithName.length) {
       console.log('no user to log in with name', name);
       return null;
     }
@@ -94,7 +95,7 @@ const model = {
       console.log('no password was correct');
       return null;
     }
-    console.log('logged in user', _.pick(user, ['id', 'name']));
+    console.log('logged in user', _.pick(loggedInUser, ['id', 'name']));
     if (existingUser && mergeUsers) {
       model.mergeUsers(existingUser, loggedInUser);
     }
