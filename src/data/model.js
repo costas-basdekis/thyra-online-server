@@ -527,17 +527,8 @@ const model = {
   },
 
   startTournament: (user, tournamentId) => {
-    const tournament = globalData.tournaments[tournamentId];
+    const tournament = model.getUserEditableTournament(user, tournamentId);
     if (!tournament) {
-      console.log('tournament not found', tournamentId);
-      return;
-    }
-    if (tournament.creatorUserId !== user.id) {
-      console.log('user', user.id, 'is not the creator of tournament', tournament.id, 'it is', tournament.creatorUserId);
-      return;
-    }
-    if (tournament.started) {
-      console.log('tournament', tournament.id, 'has already started');
       return;
     }
     if (tournament.userIds.length < 2) {
@@ -584,6 +575,24 @@ const model = {
     const {emit} = require("../websocket");
     emit.emitGames();
     emit.emitTournaments();
+  },
+
+  getUserEditableTournament(user, tournamentId) {
+    const tournament = globalData.tournaments[tournamentId];
+    if (!tournament) {
+      console.log('tournament not found', tournamentId);
+      return null;
+    }
+    if (tournament.creatorUserId !== user.id) {
+      console.log('user', user.id, 'is not the creator of tournament', tournament.id, 'it is', tournament.creatorUserId);
+      return null;
+    }
+    if (tournament.started) {
+      console.log('tournament', tournament.id, 'has already started');
+      return null;
+    }
+
+    return tournament;
   },
 
   startTournamentRound: tournament => {
@@ -771,19 +780,7 @@ const model = {
   },
 
   abortTournament: (user, tournamentId) => {
-    const tournament = globalData.tournaments[tournamentId];
-    if (!tournament) {
-      console.log('tournament not found', tournamentId);
-      return;
-    }
-    if (tournament.creatorUserId !== user.id) {
-      console.log('user', user.id, 'is not the creator of tournament', tournament.id, 'it is', tournament.creatorUserId);
-      return;
-    }
-    if (tournament.started) {
-      console.log('tournament', tournament.id, 'has already started');
-      return;
-    }
+    const tournament = model.getUserEditableTournament(user, tournamentId);
     delete globalData.tournaments[tournament.id];
     saveData();
     console.log('tournament', tournament.id, 'was aborted');
@@ -793,6 +790,21 @@ const model = {
   },
 
   createChallenge: (user, challenge) => {
+    // For type-hinting
+    // noinspection JSUnusedLocalSymbols
+    const defaultChallenge = {
+      options: {
+        initialPlayer: Game.PLAYER_A,
+        type: 'mate',
+        typeOptions: {
+          mateIn: 5,
+        },
+        meta: {
+          difficulty: 1,
+          maxDifficulty: 5,
+        },
+      },
+    };
     if (!challenge.options) {
       console.log('invalid challenge: no `options`');
       return;
