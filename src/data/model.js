@@ -136,15 +136,22 @@ const model = {
   },
 
   disconnectOrDeleteUser: (user, socket) => {
-    const hasGames = !!Object.values(globalData.games).find(game => game.userIds.includes(user.id));
-    const hasTournaments = !!Object.values(globalData.tournaments).find(tournament =>
+    model.disconnectUser(user, socket);
+    if (model.shouldDeleteUser(user)) {
+      model.deleteUsers([user]);
+    }
+  },
+
+  shouldDeleteUser(user, {userIdsWithGames = null, userIdsWithTournaments = null} = {}) {
+    const hasGames = userIdsWithGames
+      ? userIdsWithGames.has(user.id)
+      : !!Object.values(globalData.games).find(game => game.userIds.includes(user.id));
+    const hasTournaments = userIdsWithTournaments
+      ? userIdsWithTournaments.has(user.id)
+      : !!Object.values(globalData.tournaments).find(tournament =>
       tournament.userIds.includes(user.id) || tournament.creatorUserId === user.id);
     const hasChallenges = !!Object.values(user.challenges).length;
-    if (user.passwordHash || hasGames || hasTournaments || hasChallenges) {
-      model.disconnectUser(user, socket);
-    } else {
-      model.deleteUser(user);
-    }
+    return !user.online && !user.passwordHash && !hasGames && !hasTournaments && !hasChallenges;
   },
 
   disconnectUser: (user, socket) => {
@@ -160,9 +167,11 @@ const model = {
     emit.emitUsers();
   },
 
-  deleteUser: user => {
-    console.log('deleting user', _.pick(user, ['id', 'name']));
-    delete globalData.users[user.id];
+  deleteUsers: users => {
+    console.log('deleting', users.length, 'users', users.map(user => _.pick(user, ['id', 'name'])));
+    for (const user of users) {
+      delete globalData.users[user.id];
+    }
     saveData();
     const {emit} = require("../websocket");
     emit.emitUsers();
@@ -1030,32 +1039,16 @@ const model = {
       }
       console.log('removed', gamesToRemove.length, 'not-started games');
     }
-    const userIdsWithGamesOrTournaments = new Set([
-      ..._.flatten(Object.values(globalData.games).map(game => game.userIds)),
-      ..._.flatten(Object.values(globalData.tournaments).map(tournament => tournament.creatorUserId)),
-    ]);
+    const userIdsWithGames = new Set(
+      _.flatten(Object.values(globalData.games).map(game => game.userIds)));
+    const userIdsWithTournaments = new Set(
+      _.flatten(Object.values(globalData.tournaments).map(tournament => tournament.creatorUserId)));
     const usersToRemove = Object.values(globalData.users)
-      .filter(user => {
-        if (user.online) {
-          return false;
-        }
-        if (user.passwordHash) {
-          return false;
-        }
-        if (userIdsWithGamesOrTournaments.has(user.id)) {
-          return false;
-        }
-        if (Object.values(user.challenges).length) {
-          return false;
-        }
-
-        return true;
-      });
+      .filter(user => model.shouldDeleteUser(
+        user, {userIdsWithGames, userIdsWithTournaments}));
     if (usersToRemove.length) {
-      for (const user of usersToRemove) {
-        delete globalData.users[user.id];
-      }
-      console.log('removed', usersToRemove.length, 'users with no games and no password');
+      model.deleteUsers(usersToRemove);
+      console.log('removed', usersToRemove.length, 'users with no activity and no password');
     }
 
     const {emit} = require("../websocket");
