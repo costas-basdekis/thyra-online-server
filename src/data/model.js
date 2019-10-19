@@ -957,10 +957,18 @@ const model = {
     }
 
     const userChallenge = user.challenges[challenge.id] = user.challenges[challenge.id] || {
-      invalidPlayerPositions: [],
-      playerResponses: [],
+      meta: {
+        started: true,
+        mistakes: 0,
+        won: false,
+      },
+      startingPosition: {
+        position: challenge.startingPosition.position,
+        invalidPlayerPositions: [],
+        playerResponses: [],
+      },
     };
-    let userChallengeStep = userChallenge;
+    let userChallengeStep = userChallenge.startingPosition;
     let challengeStep = challenge.startingPosition;
     let game = Game.fromCompressedPositionNotation(challengeStep.position);
     for (const moves of path) {
@@ -986,6 +994,7 @@ const model = {
       if (!validPlayerResponse) {
         if (!userChallengeStep.invalidPlayerPositions.includes(nextGame.positionNotation)) {
           userChallengeStep.invalidPlayerPositions.push(nextGame.positionNotation);
+          userChallenge.meta.mistakes += 1;
         }
         console.log('user', user.id, 'did a wrong move on challenge', challenge.id);
         break;
@@ -1021,6 +1030,7 @@ const model = {
 
       if (!challengeStep) {
         console.log('user', user.id, 'completed a challenge', challenge.id);
+        userChallenge.meta.won = true;
         break;
       }
     }
