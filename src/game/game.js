@@ -313,6 +313,9 @@ class Game {
     this.lastMovesInHistory = this.fullHistory
       .slice(this.fullHistory.indexOf(this.previousInHistory) + 1)
       .map(game => game.lastMove);
+    this.path = this.previousInHistory
+      ? this.previousInHistory.path.concat([this.lastMovesInHistory])
+      : [];
 
     this.rowsAndColumns = rowsAndColumns;
 

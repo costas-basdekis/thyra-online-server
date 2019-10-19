@@ -175,6 +175,20 @@ class Connection {
     model.createChallenge(this.user, challenge);
   });
 
+  submitChallengeMoves = this.on('submit-challenge-moves', ({id, path}) => {
+    if (!this.user) {
+      return;
+    }
+
+    const challenge = globalData.challenges[id];
+    if (!challenge) {
+      console.log("Challenge not recognised", id);
+      return;
+    }
+
+    model.submitChallengeMoves(challenge, this.user, path);
+  });
+
   disconnect = this.on('disconnect', () => {
     if (this.user) {
       model.disconnectOrDeleteUser(this.user, this.socket);

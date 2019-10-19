@@ -12,7 +12,7 @@ const emit = {
     const serializedUser = {
       ..._.pick(user, [
         'id', 'name', 'token', 'online', 'readyToPlay', 'settings', 'score', 'gameCount', 'winCount',
-        'tournamentCount', 'tournamentWinCount',
+        'tournamentCount', 'tournamentWinCount', 'challenges',
       ]),
       hasPassword: !!user.passwordHash,
       isUserRatingProvisional: services.isUserRatingProvisional(user),

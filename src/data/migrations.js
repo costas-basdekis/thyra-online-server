@@ -489,3 +489,12 @@ addMigration({
     data.challenges = [];
   },
 });
+
+addMigration({
+  description: "Add user challenges",
+  migrate: data => {
+    for (const user of data.users) {
+      user.challenges = {};
+    }
+  },
+});

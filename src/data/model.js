@@ -33,6 +33,7 @@ const model = {
       winCount: 0,
       tournamentCount: 0,
       tournamentWinCount: 0,
+      challenges: {},
     };
     globalData.users[user.id] = user;
     saveData();
@@ -138,7 +139,8 @@ const model = {
     const hasGames = !!Object.values(globalData.games).find(game => game.userIds.includes(user.id));
     const hasTournaments = !!Object.values(globalData.tournaments).find(tournament =>
       tournament.userIds.includes(user.id) || tournament.creatorUserId === user.id);
-    if (user.passwordHash || hasGames || hasTournaments) {
+    const hasChallenges = !!Object.values(user.challenges).length;
+    if (user.passwordHash || hasGames || hasTournaments || hasChallenges) {
       model.disconnectUser(user, socket);
     } else {
       model.deleteUser(user);
@@ -926,6 +928,85 @@ const model = {
     return cleanedChallenge;
   },
 
+  submitChallengeMoves: (challenge, user, path) => {
+    if (!path || !path.length) {
+      console.log('missing challenges moves');
+      return;
+    }
+
+    const userChallenge = user.challenges[challenge.id] = user.challenges[challenge.id] || {
+      invalidPlayerPositions: [],
+      playerResponses: [],
+    };
+    let userChallengeStep = userChallenge;
+    let challengeStep = challenge.startingPosition;
+    let game = Game.fromCompressedPositionNotation(challengeStep.position);
+    for (const moves of path) {
+      let nextGame;
+      try {
+        nextGame = game.makeMoves(moves);
+      } catch (e) {
+        console.log('invalid challenge moves');
+        break;
+      }
+      if (nextGame.moveCount !== game.moveCount + 1) {
+        console.log('invalid challenge moves: too many or too few moves');
+        break;
+      }
+      if (nextGame.nextPlayer === game.nextPlayer) {
+        console.log('invalid challenge moves: too many or too few moves');
+        break;
+      }
+      game = nextGame;
+
+      const validPlayerResponse = challengeStep.playerResponses
+        .find(response => response.position === nextGame.positionNotation);
+      if (!validPlayerResponse) {
+        if (!userChallengeStep.invalidPlayerPositions.includes(nextGame.positionNotation)) {
+          userChallengeStep.invalidPlayerPositions.push(nextGame.positionNotation);
+        }
+        console.log('user', user.id, 'did a wrong move on challenge', challenge.id);
+        break;
+      }
+      console.log('user', user.id, 'did a right move on challenge', challenge.id);
+
+      let nextUserChallengeStep = userChallengeStep.playerResponses
+        .find(response => response.position === validPlayerResponse.position);
+      if (nextUserChallengeStep) {
+        userChallengeStep = nextUserChallengeStep;
+      } else {
+        nextUserChallengeStep = {
+          position: validPlayerResponse.position,
+          moves: validPlayerResponse.moves,
+          challengeResponse: null,
+        };
+        userChallengeStep.playerResponses.push(nextUserChallengeStep);
+        userChallengeStep = nextUserChallengeStep;
+        if (validPlayerResponse.challengeResponse) {
+          userChallengeStep.challengeResponse = {
+            position: validPlayerResponse.challengeResponse.position,
+            moves: validPlayerResponse.challengeResponse.moves,
+            playerResponses: [],
+            invalidPlayerPositions: [],
+          };
+        }
+      }
+      userChallengeStep = userChallengeStep.challengeResponse;
+      if (validPlayerResponse.challengeResponse) {
+        game = game.makeMoves(validPlayerResponse.challengeResponse.moves);
+      }
+      challengeStep = validPlayerResponse.challengeResponse;
+
+      if (!challengeStep) {
+        console.log('user', user.id, 'completed a challenge', challenge.id);
+        break;
+      }
+    }
+    saveData();
+    const {emit} = require("../websocket");
+    emit.emitUser(user);
+  },
+
   cleanupUsersAndGames: () => {
     const now = moment();
     const gamesToRemove = Object.values(globalData.games).filter(game => {
@@ -962,6 +1043,9 @@ const model = {
           return false;
         }
         if (userIdsWithGamesOrTournaments.has(user.id)) {
+          return false;
+        }
+        if (Object.values(user.challenges).length) {
           return false;
         }
 
