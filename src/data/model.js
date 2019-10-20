@@ -847,12 +847,12 @@ const model = {
       console.log('invalid challenge: `meta.source` is not a string');
       return;
     }
-    if (challenge.meta.difficulty < 1 || challenge.meta.difficulty > 5) {
+    if (challenge.meta.difficulty < 1 || challenge.meta.difficulty > 3) {
       console.log('invalid challenge: `meta.difficulty` is out of range');
       return;
     }
-    if (challenge.meta.maxDifficulty !== 5) {
-      console.log('invalid challenge: `meta.maxDifficulty` is not 5');
+    if (challenge.meta.maxDifficulty !== 3) {
+      console.log('invalid challenge: `meta.maxDifficulty` is not 3');
       return;
     }
     if (!challenge.startingPosition) {
