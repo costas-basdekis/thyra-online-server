@@ -847,6 +847,21 @@ const model = {
       console.log('invalid challenge: `meta.source` is not a string');
       return;
     }
+    if (typeof challenge.meta.public !== typeof true) {
+      console.log('invalid challenge: `meta.public` is not a boolean');
+      return;
+    }
+    if (challenge.meta.publishDatetime) {
+      if (!moment(challenge.meta.publishDatetime).isValid()) {
+        console.log('invalid challenge: `meta.publishDatetime` is not valid');
+        return;
+      }
+      challenge.meta.publishDatetime = moment(challenge.meta.publishDatetime);
+    } else {
+      if (challenge.meta.public) {
+        challenge.meta.publishDatetime = moment();
+      }
+    }
     if (challenge.meta.difficulty < 1 || challenge.meta.difficulty > 3) {
       console.log('invalid challenge: `meta.difficulty` is out of range');
       return;
@@ -935,7 +950,7 @@ const model = {
         typeOptions: _.pick(challenge.options.typeOptions, ['mateIn']),
       },
       meta: {
-        ..._.pick(challenge.meta, ['source', 'difficulty', 'maxDifficulty']),
+        ..._.pick(challenge.meta, ['source', 'difficulty', 'maxDifficulty', 'publishDatetime']),
         createdDatetime: moment(),
       },
       startingPosition: cleanPosition(challenge.startingPosition, 'playerResponses'),

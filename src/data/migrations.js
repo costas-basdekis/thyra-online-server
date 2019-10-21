@@ -498,3 +498,13 @@ addMigration({
     }
   },
 });
+
+addMigration({
+  description: "Add more challenges meta fields",
+  migrate: data => {
+    for (const challenge of data.challenges) {
+      challenge.meta.public = true;
+      challenge.meta.publishDatetime = challenge.meta.createdDatetime;
+    }
+  },
+});

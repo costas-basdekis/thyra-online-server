@@ -52,6 +52,7 @@ const prepareDataForSave = data => {
       meta: {
         ...challenge.meta,
         createdDatetime: challenge.meta.createdDatetime.toISOString(),
+        publishDatetime: challenge.meta.publishDatetime ? challenge.meta.publishDatetime.toISOString() : null,
       },
     })),
   };
@@ -85,6 +86,7 @@ const prepareDataFromLoad = dataFromLoad => {
       meta: {
         ...challenge.meta,
         createdDatetime: moment(challenge.meta.createdDatetime),
+        publishDatetime: challenge.meta.publishDatetime ? moment(challenge.meta.publishDatetime) : null,
       },
     }])),
   };

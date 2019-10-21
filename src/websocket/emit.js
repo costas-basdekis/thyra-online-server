@@ -58,10 +58,12 @@ const emit = {
 
   emitChallenges: (socket = io) => {
     const {persistence: {globalData}} = require("../data");
-    socket.emit("challenges", Object.values(globalData.challenges).map(challenge => ({
-      ..._.pick(challenge, ['id', 'userId', 'options', 'meta']),
-      startingPosition: _.pick(challenge.startingPosition, ['position']),
-    })));
+    socket.emit("challenges", Object.values(globalData.challenges)
+      .filter(challenge => challenge.meta.public && challenge.meta.publishDatetime.isSameOrBefore())
+      .map(challenge => ({
+        ..._.pick(challenge, ['id', 'userId', 'options', 'meta']),
+        startingPosition: _.pick(challenge.startingPosition, ['position']),
+      })));
   },
 };
 
