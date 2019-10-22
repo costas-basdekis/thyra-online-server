@@ -508,3 +508,12 @@ addMigration({
     }
   },
 });
+
+addMigration({
+  description: "Add user setting confirmSubmitMoves",
+  migrate: data => {
+    for (const user of data.users) {
+      user.settings.confirmSubmitMoves = true;
+    }
+  },
+});

@@ -23,6 +23,7 @@ const model = {
       readyToPlay: false,
       settings: extraData.settings || {
         autoSubmitMoves: false,
+        confirmSubmitMoves: true,
         enableNotifications: false,
         theme: {pieces: 'king', scheme: '', rotateOpponent: true, numbers: 'obvious', animations: true, arrows: true},
       },
