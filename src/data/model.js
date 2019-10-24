@@ -9,6 +9,23 @@ const bcrypt = require('bcrypt');
 const reUuid4 = /[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/;
 
 const model = {
+  getDefaultSettings: () => {
+    return {
+      autoSubmitMoves: false,
+      confirmSubmitMoves: true,
+      enableNotifications: false,
+      theme: {
+        cells: 'original',
+        pieces: 'king',
+        scheme: '',
+        rotateOpponent: true,
+        numbers: 'obvious',
+        animations: true,
+        arrows: true,
+      },
+    };
+  },
+
   createUser: (socket, extraData = {}) => {
     let id = extraData.id || uuid4();
     while (id in globalData.users) {
@@ -21,20 +38,7 @@ const model = {
       passwordHash: null,
       online: true,
       readyToPlay: false,
-      settings: extraData.settings || {
-        autoSubmitMoves: false,
-        confirmSubmitMoves: true,
-        enableNotifications: false,
-        theme: {
-          cells: 'original',
-          pieces: 'king',
-          scheme: '',
-          rotateOpponent: true,
-          numbers: 'obvious',
-          animations: true,
-          arrows: true,
-        },
-      },
+      settings: _.merge(model.getDefaultSettings(), extraData.settings),
       sockets: [socket],
       score: 1200,
       maxScore: 1200,
