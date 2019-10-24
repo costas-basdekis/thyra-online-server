@@ -36,6 +36,7 @@ const model = {
       id,
       name: extraData.name || `Guest ${id.slice(0, 4)}`,
       token: uuid4(),
+      admin: false,
       passwordHash: null,
       online: true,
       readyToPlay: false,

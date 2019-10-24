@@ -535,3 +535,12 @@ addMigration({
     }
   },
 });
+
+addMigration({
+  description: "Add admins",
+  migrate: data => {
+    for (const user of data.users) {
+      user.admin = user.id === '5c8475c8-5dd8-4a05-914b-809e91b1deac';
+    }
+  },
+});

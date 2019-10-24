@@ -12,7 +12,7 @@ const emit = {
     const serializedUser = {
       ..._.pick(user, [
         'id', 'name', 'token', 'online', 'readyToPlay', 'settings', 'score', 'gameCount', 'winCount',
-        'tournamentCount', 'tournamentWinCount', 'challenges',
+        'tournamentCount', 'tournamentWinCount', 'challenges', 'admin',
       ]),
       hasPassword: !!user.passwordHash,
       isUserRatingProvisional: services.isUserRatingProvisional(user),
@@ -25,7 +25,7 @@ const emit = {
     socket.emit("users", Object.values(globalData.users).map(user => ({
       ..._.pick(user, [
         'id', 'name', 'online', 'readyToPlay', 'score', 'gameCount', 'winCount', 'tournamentCount',
-        'tournamentWinCount',
+        'tournamentWinCount', 'admin',
       ]),
       isUserRatingProvisional: services.isUserRatingProvisional(user),
     })));
