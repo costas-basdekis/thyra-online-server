@@ -517,3 +517,12 @@ addMigration({
     }
   },
 });
+
+addMigration({
+  description: "Add user setting `theme.cells`",
+  migrate: data => {
+    for (const user of data.users) {
+      user.settings.theme.cells = 'original';
+    }
+  },
+});
