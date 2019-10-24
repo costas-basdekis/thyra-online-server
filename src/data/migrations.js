@@ -526,3 +526,12 @@ addMigration({
     }
   },
 });
+
+addMigration({
+  description: "Add user setting `theme.useTopicalTheme`",
+  migrate: data => {
+    for (const user of data.users) {
+      user.settings.theme.useTopicalTheme = true;
+    }
+  },
+});
