@@ -805,6 +805,55 @@ const model = {
   },
 
   createChallenge: (user, challenge) => {
+    let id = uuid4();
+    while (id in globalData.challenges) {
+      id = uuid4();
+    }
+    const cleanedChallenge = model.cleanChallenge(user, challenge);
+    if (!cleanedChallenge) {
+      return;
+    }
+    cleanedChallenge.id = id;
+    cleanedChallenge.meta.createdDatetime = moment();
+
+    console.log('new challenge', _.pick(cleanedChallenge, ['id', 'userId']));
+    globalData.challenges[cleanedChallenge.id] = cleanedChallenge;
+    saveData();
+    const {emit} = require("../websocket");
+    emit.emitChallenges();
+
+    return cleanedChallenge;
+  },
+
+  updateChallenge(user, challenge) {
+    const storedChallenge = globalData.challenges[challenge.id];
+    if (!storedChallenge) {
+      console.log('challenge not found', challenge.id);
+      return;
+    }
+
+    if (storedChallenge.userId !== user.id) {
+      console.log('user', _.pick(user, ['id', 'name']), 'does not own challenge', challenge.id);
+      return;
+    }
+
+    const cleanedChallenge = model.cleanChallenge(user, challenge);
+
+    if (storedChallenge.meta.createdDatetime.toISOString() !== cleanedChallenge.meta.createdDatetime.toISOString()) {
+      console.log('challenger', challenge.id, 'updated the `createdDatetime` which is not allowed');
+      return;
+    }
+
+    console.log('update challenge', _.pick(cleanedChallenge, ['id', 'userId']));
+    globalData.challenges[cleanedChallenge.id] = cleanedChallenge;
+    saveData();
+    const {emit} = require("../websocket");
+    emit.emitChallenges();
+
+    return cleanedChallenge;
+  },
+
+  cleanChallenge: (user, challenge) => {
     // For type-hinting
     // noinspection JSUnusedLocalSymbols
     const defaultChallenge = {
@@ -822,20 +871,20 @@ const model = {
     };
     if (!challenge.options) {
       console.log('invalid challenge: no `options`');
-      return;
+      return null;
     }
     if (!['mate'].includes(challenge.options.type)) {
       console.log(`invalid challenge: unknown \`options.type\` of \`${challenge.options.type}\``);
-      return;
+      return null;
     }
     if (!challenge.options.typeOptions) {
       console.log('invalid challenge: no `options.typeOptions`');
-      return;
+      return null;
     }
     if (challenge.options.type === 'mate') {
       if (typeof challenge.options.typeOptions.mateIn !== typeof 1 || isNaN(challenge.options.typeOptions.mateIn)) {
         console.log('invalid challenge: `options.typeOptions.mateIn` is not a number');
-        return;
+        return null;
       }
       if (parseInt(challenge.options.typeOptions.mateIn, 10) !== challenge.options.typeOptions.mateIn) {
         console.log('invalid challenge: `options.typeOptions.mateIn` is not an integer');
@@ -843,33 +892,33 @@ const model = {
       }
       if (challenge.options.typeOptions.mateIn < 1 || challenge.options.typeOptions.mateIn > 10) {
         console.log('invalid challenge: `options.typeOptions.mateIn` is out of range');
-        return;
+        return null;
       }
     }
     if (!Game.PLAYERS.includes(challenge.options.initialPlayer)) {
       console.log('invalid challenge: `challenge.initialPlayer` is not player A or B');
-      return;
+      return null;
     }
     if (typeof challenge.meta.difficulty !== typeof 1 || isNaN(challenge.meta.difficulty)) {
       console.log('invalid challenge: `meta.difficulty` is not a number');
-      return;
+      return null;
     }
     if (parseInt(challenge.meta.difficulty, 10) !== challenge.meta.difficulty) {
       console.log('invalid challenge: `meta.difficulty` is not an integer');
-      return;
+      return null;
     }
     if (typeof challenge.meta.source !== typeof '') {
       console.log('invalid challenge: `meta.source` is not a string');
-      return;
+      return null;
     }
     if (typeof challenge.meta.public !== typeof true) {
       console.log('invalid challenge: `meta.public` is not a boolean');
-      return;
+      return null;
     }
     if (challenge.meta.publishDatetime) {
       if (!moment(challenge.meta.publishDatetime).isValid()) {
         console.log('invalid challenge: `meta.publishDatetime` is not valid');
-        return;
+        return null;
       }
       challenge.meta.publishDatetime = moment(challenge.meta.publishDatetime);
     } else {
@@ -879,22 +928,22 @@ const model = {
     }
     if (challenge.meta.difficulty < 1 || challenge.meta.difficulty > 3) {
       console.log('invalid challenge: `meta.difficulty` is out of range');
-      return;
+      return null;
     }
     if (challenge.meta.maxDifficulty !== 3) {
       console.log('invalid challenge: `meta.maxDifficulty` is not 3');
-      return;
+      return null;
     }
     if (!challenge.startingPosition) {
       console.log('invalid challenge: `startingPosition` is missing');
-      return;
+      return null;
     }
     const validatePositions = [[challenge.startingPosition, null, 'playerResponses']];
     while (validatePositions.length) {
       const [position, previousGame, positionType] = validatePositions.shift();
       if (!Game.isValidCompressedPositionNotation(position.position)) {
         console.log('invalid challenge: position has not valid `position`');
-        return;
+        return null;
       }
       let game;
       if (!previousGame) {
@@ -904,25 +953,25 @@ const model = {
           game = previousGame.makeMoves(position.moves);
         } catch (e) {
           console.log('invalid challenge: moves are invalid');
-          return;
+          return null;
         }
         if (game.moveCount !== previousGame.moveCount + 1) {
           console.log('invalid challenge: too many or too few moves');
-          return;
+          return null;
         }
         if (game.nextPlayer === previousGame.nextPlayer) {
           console.log('invalid challenge: too many or too few moves');
-          return;
+          return null;
         }
         if (game.positionNotation !== position.position) {
           console.log('invalid challenge: position notation does\'t match moves');
-          return;
+          return null;
         }
       }
       if (positionType === 'playerResponses') {
         if (!Array.isArray(position.playerResponses)) {
           console.log('invalid challenge: player response position doesn\'t have player responses');
-          return;
+          return null;
         }
         for (const nextPosition of position.playerResponses) {
           validatePositions.push([nextPosition, game, 'challengeResponse']);
@@ -932,7 +981,7 @@ const model = {
           validatePositions.push([position.challengeResponse, game, 'playerResponses']);
         } else if (position.challengeResponse !== null) {
           console.log('invalid challenge: challenge response position doesn\'t have challenge response field');
-          return;
+          return null;
         }
       }
     }
@@ -953,12 +1002,7 @@ const model = {
       }
     };
 
-    let id = uuid4();
-    while (id in globalData.challenges) {
-      id = uuid4();
-    }
     const cleanedChallenge = {
-      id,
       userId: user.id,
       options: {
         ..._.pick(challenge.options, ['initialPlayer', 'type', ]),
@@ -966,16 +1010,9 @@ const model = {
       },
       meta: {
         ..._.pick(challenge.meta, ['source', 'difficulty', 'maxDifficulty', 'publishDatetime']),
-        createdDatetime: moment(),
       },
       startingPosition: cleanPosition(challenge.startingPosition, 'playerResponses'),
     };
-
-    console.log('new challenge', _.pick(cleanedChallenge, ['id', 'userId']));
-    globalData.challenges[cleanedChallenge.id] = cleanedChallenge;
-    saveData();
-    const {emit} = require("../websocket");
-    emit.emitChallenges();
 
     return cleanedChallenge;
   },

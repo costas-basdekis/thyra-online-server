@@ -175,6 +175,14 @@ class Connection {
     model.createChallenge(this.user, challenge);
   });
 
+  updateChallenge = this.on('update-challenge', challenge => {
+    if (!this.user) {
+      return;
+    }
+
+    model.updateChallenge(this.user, challenge);
+  });
+
   submitChallengeMoves = this.on('submit-challenge-moves', ({id, path}) => {
     if (!this.user) {
       return;
