@@ -59,7 +59,7 @@ class Connection {
     emit.emitGames(this.socket);
     emit.emitTournaments(this.socket);
     emit.emitChallenges(this.socket);
-    emit.emitPrivateChallenges([this.user.id]);
+    emit.emitPersonalChallenges([this.user.id]);
   });
 
   logIn = this.on('log-in', async ({name, password, mergeUsers}) => {

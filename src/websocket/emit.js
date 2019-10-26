@@ -66,26 +66,20 @@ const emit = {
       })));
   },
 
-  emitPrivateChallenges: (userIds = null) => {
+  emitPersonalChallenges: (userIds = null) => {
     const {persistence: {globalData}} = require("../data");
-    let privateChallenges = Object.values(globalData.challenges)
-      .filter(challenge => !challenge.meta.public || challenge.meta.publishDatetime.isAfter());
+    let personalChallenges = Object.values(globalData.challenges);
     if (userIds) {
-      privateChallenges = privateChallenges.filter(challenge => userIds.includes(challenge.userId));
-    } else {
-      privateChallenges = privateChallenges.filter(challenge => globalData.users[challenge.userId].online);
+      personalChallenges = personalChallenges.filter(challenge => userIds.includes(challenge.userId));
     }
-    if (!privateChallenges.length) {
-      return;
-    }
-    const privateChallengesByUserId = _.groupBy(privateChallenges, 'userId');
-    for (const [userId, userPrivateChallenges] of Object.entries(privateChallengesByUserId)) {
+    const personalChallengesByUserId = _.groupBy(personalChallenges, 'userId');
+    for (const [userId, userPersonalChallenges] of Object.entries(personalChallengesByUserId)) {
       const user = globalData.users[userId];
       for (const socket of user.sockets) {
-        socket.emit("private-challenges", userPrivateChallenges
+        socket.emit("personal-challenges", userPersonalChallenges
           .map(challenge => ({
-            ..._.pick(challenge, ['id', 'userId', 'options', 'meta']),
-            startingPosition: _.pick(challenge.startingPosition, ['position']),
+            ..._.pick(challenge, ['id', 'userId', 'options', 'meta', 'startingPosition']),
+            isMyChallenge: true,
           })));
       }
     }

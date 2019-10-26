@@ -821,7 +821,7 @@ const model = {
     saveData();
     const {emit} = require("../websocket");
     emit.emitChallenges();
-    emit.emitPrivateChallenges([user.id]);
+    emit.emitPersonalChallenges([user.id]);
 
     return cleanedChallenge;
   },
@@ -839,18 +839,15 @@ const model = {
     }
 
     const cleanedChallenge = model.cleanChallenge(user, challenge);
-
-    if (storedChallenge.meta.createdDatetime.toISOString() !== cleanedChallenge.meta.createdDatetime.toISOString()) {
-      console.log('challenger', challenge.id, 'updated the `createdDatetime` which is not allowed');
-      return;
-    }
+    cleanedChallenge.id = storedChallenge.id;
+    cleanedChallenge.meta.createdDatetime = storedChallenge.meta.createdDatetime;
 
     console.log('update challenge', _.pick(cleanedChallenge, ['id', 'userId']));
     globalData.challenges[cleanedChallenge.id] = cleanedChallenge;
     saveData();
     const {emit} = require("../websocket");
     emit.emitChallenges();
-    emit.emitPrivateChallenges([user.id]);
+    emit.emitPersonalChallenges([user.id]);
 
     return cleanedChallenge;
   },
@@ -1011,7 +1008,7 @@ const model = {
         typeOptions: _.pick(challenge.options.typeOptions, ['mateIn']),
       },
       meta: {
-        ..._.pick(challenge.meta, ['source', 'difficulty', 'maxDifficulty', 'publishDatetime']),
+        ..._.pick(challenge.meta, ['source', 'difficulty', 'maxDifficulty', 'public', 'publishDatetime']),
       },
       startingPosition: cleanPosition(challenge.startingPosition, 'playerResponses'),
     };
