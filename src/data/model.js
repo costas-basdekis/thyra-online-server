@@ -821,6 +821,7 @@ const model = {
     saveData();
     const {emit} = require("../websocket");
     emit.emitChallenges();
+    emit.emitPrivateChallenges([user.id]);
 
     return cleanedChallenge;
   },
@@ -849,6 +850,7 @@ const model = {
     saveData();
     const {emit} = require("../websocket");
     emit.emitChallenges();
+    emit.emitPrivateChallenges([user.id]);
 
     return cleanedChallenge;
   },

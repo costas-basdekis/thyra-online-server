@@ -65,6 +65,31 @@ const emit = {
         startingPosition: _.pick(challenge.startingPosition, ['position']),
       })));
   },
+
+  emitPrivateChallenges: (userIds = null) => {
+    const {persistence: {globalData}} = require("../data");
+    let privateChallenges = Object.values(globalData.challenges)
+      .filter(challenge => !challenge.meta.public || challenge.meta.publishDatetime.isAfter());
+    if (userIds) {
+      privateChallenges = privateChallenges.filter(challenge => userIds.includes(challenge.userId));
+    } else {
+      privateChallenges = privateChallenges.filter(challenge => globalData.users[challenge.userId].online);
+    }
+    if (!privateChallenges.length) {
+      return;
+    }
+    const privateChallengesByUserId = _.groupBy(privateChallenges, 'userId');
+    for (const [userId, userPrivateChallenges] of Object.entries(privateChallengesByUserId)) {
+      const user = globalData.users[userId];
+      for (const socket of user.sockets) {
+        socket.emit("private-challenges", userPrivateChallenges
+          .map(challenge => ({
+            ..._.pick(challenge, ['id', 'userId', 'options', 'meta']),
+            startingPosition: _.pick(challenge.startingPosition, ['position']),
+          })));
+      }
+    }
+  },
 };
 
 module.exports = emit;
