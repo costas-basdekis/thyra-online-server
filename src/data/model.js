@@ -890,7 +890,7 @@ const model = {
       console.log('invalid challenge: no `options`');
       return null;
     }
-    if (!['mate'].includes(challenge.options.type)) {
+    if (!['mate', 'avoidMate'].includes(challenge.options.type)) {
       console.log(`invalid challenge: unknown \`options.type\` of \`${challenge.options.type}\``);
       return null;
     }
@@ -899,6 +899,19 @@ const model = {
       return null;
     }
     if (challenge.options.type === 'mate') {
+      if (typeof challenge.options.typeOptions.mateIn !== typeof 1 || isNaN(challenge.options.typeOptions.mateIn)) {
+        console.log('invalid challenge: `options.typeOptions.mateIn` is not a number');
+        return null;
+      }
+      if (parseInt(challenge.options.typeOptions.mateIn, 10) !== challenge.options.typeOptions.mateIn) {
+        console.log('invalid challenge: `options.typeOptions.mateIn` is not an integer');
+        return
+      }
+      if (challenge.options.typeOptions.mateIn < 1 || challenge.options.typeOptions.mateIn > 10) {
+        console.log('invalid challenge: `options.typeOptions.mateIn` is out of range');
+        return null;
+      }
+    } else if (challenge.options.type === 'avoidMate') {
       if (typeof challenge.options.typeOptions.mateIn !== typeof 1 || isNaN(challenge.options.typeOptions.mateIn)) {
         console.log('invalid challenge: `options.typeOptions.mateIn` is not a number');
         return null;
