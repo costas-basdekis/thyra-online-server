@@ -161,7 +161,7 @@ const model = {
     }
   },
 
-  shouldDeleteUser(user, {userIdsWithGames = null, userIdsWithTournaments = null} = {}) {
+  shouldDeleteUser(user, {userIdsWithGames = null, userIdsWithTournaments = null, userIdsWithChallenges = null} = {}) {
     const hasGames = userIdsWithGames
       ? userIdsWithGames.has(user.id)
       : !!Object.values(globalData.games).find(game => game.userIds.includes(user.id));
@@ -170,6 +170,9 @@ const model = {
       : !!Object.values(globalData.tournaments).find(tournament =>
       tournament.userIds.includes(user.id) || tournament.creatorUserId === user.id);
     const hasChallenges = !!Object.values(user.challenges).length;
+    const hasCreatedChallenges = userIdsWithChallenges
+      ? userIdsWithChallenges.has(user.id)
+      : !!Object.values(globalData.challenges).find(challenge => challenge.userId === user.id);
     return !user.online && !user.passwordHash && !hasGames && !hasTournaments && !hasChallenges;
   },
 
@@ -1135,9 +1138,11 @@ const model = {
       _.flatten(Object.values(globalData.games).map(game => game.userIds)));
     const userIdsWithTournaments = new Set(
       _.flatten(Object.values(globalData.tournaments).map(tournament => tournament.creatorUserId)));
+    const userIdsWithChallenges = new Set(
+      _.flatten(Object.values(globalData.challenges).map(challenge => challenge.userId)));
     const usersToRemove = Object.values(globalData.users)
       .filter(user => model.shouldDeleteUser(
-        user, {userIdsWithGames, userIdsWithTournaments}));
+        user, {userIdsWithGames, userIdsWithTournaments, userIdsWithChallenges}));
     if (usersToRemove.length) {
       model.deleteUsers(usersToRemove);
       console.log('removed', usersToRemove.length, 'users with no activity and no password');
