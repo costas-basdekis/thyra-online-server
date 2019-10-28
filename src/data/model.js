@@ -141,6 +141,9 @@ const model = {
           pairing.userIds = pairing.userIds.map(userId => userId === mergedUser.id ? user.id : userId);
         }
       }
+      for (const challenge of Object.values(globalData.challenges)) {
+        challenge.userId = challenge.userId === mergedUser.id ? user.id : challenge.userId;
+      }
     }
     delete globalData.users[mergedUser.id];
     const {emit} = require("../websocket");
