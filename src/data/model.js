@@ -347,7 +347,7 @@ const model = {
     const playerA = globalData.users[game.userIds[0]];
     const playerB = globalData.users[game.userIds[1]];
     if (moves === 'resign') {
-      if (game.move < 5 && !game.tournamentId) {
+      if (model.isGameTooShortToResign(game)) {
         console.log("User", _.pick(user, ['id', 'name']), "aborted game", _.pick(game, ['id', 'userIds', 'tournamentId', 'moveCount']));
         delete globalData.games[game.id];
         saveData();
@@ -455,7 +455,7 @@ const model = {
   },
 
   isGameTooShortToResign: game => {
-    return game.move < 5;
+    return !game.tournamentId && game.move < 5;
   },
 
   createTournament: (creator, {name, gameCount}) => {
