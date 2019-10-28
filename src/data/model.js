@@ -273,7 +273,7 @@ const model = {
     saveData();
     if (game) {
       console.log('started game', _.pick(game, ['id', 'userIds', 'tournamentId', 'moveCount']));
-      emit.emitGames();
+      emit.emitGame(game);
       emit.emitUser(otherUser);
     }
     emit.emitUser(user);
@@ -351,7 +351,7 @@ const model = {
         console.log("User", _.pick(user, ['id', 'name']), "aborted game", _.pick(game, ['id', 'userIds', 'tournamentId', 'moveCount']));
         delete globalData.games[game.id];
         saveData();
-        emit.emitGames();
+        emit.emitGame(game);
         return;
       }
       const userPlayer = game.userIds[0] === user.id ? Game.PLAYER_A : Game.PLAYER_B;
@@ -430,7 +430,7 @@ const model = {
       }
     } else {
       saveData();
-      emit.emitGames();
+      emit.emitGame(game);
     }
     console.log("Made a move on game", _.pick(game, ['id', 'userIds', 'tournamentId', 'moveCount']));
   },
@@ -451,7 +451,7 @@ const model = {
     emit.emitUser(playerA);
     emit.emitUser(playerB);
     emit.emitUsers();
-    emit.emitGames();
+    emit.emitGame(game);
   },
 
   isGameTooShortToResign: game => {
@@ -589,12 +589,14 @@ const model = {
         scoreDifference: null,
       }])),
     });
-    model.startTournamentRound(tournament);
+    const games = model.startTournamentRound(tournament);
     console.log('tournament', tournament.id, 'just started', _.pick(tournament, ['id', 'name', 'gameCount', 'start', 'finished', 'round']));
     saveData();
 
     const {emit} = require("../websocket");
-    emit.emitGames();
+    for (const game of games) {
+      emit.emitGame(game);
+    }
     emit.emitTournaments();
   },
 
@@ -621,6 +623,7 @@ const model = {
     const round = tournament.schedule[nextRoundNumber - 1];
     console.log('tournament', tournament.id, round.type, 'round', round.round, 'is starting');
     tournament.round = round.round;
+    const games = [];
     for (const pairing of round.pairings) {
       const {userIds: [playerAId, playerBId], sittingOut} = pairing;
       const playerAStats = tournament.userStats[playerAId];
@@ -648,6 +651,7 @@ const model = {
       const playerA = globalData.users[playerAId];
       const playerB = globalData.users[playerBId];
       const game = model.createGame(playerA, playerB, tournament.id);
+      games.push(game);
       tournament.gameIds.push(game.id);
       pairing.gameId = game.id;
       Object.assign(playerAStats, {
@@ -662,6 +666,8 @@ const model = {
       });
     }
     console.log('tournament', tournament.id, round.type, 'round', tournament.round, 'just started');
+
+    return games;
   },
 
   updateTournamentAfterGameEnd: game => {
@@ -715,10 +721,13 @@ const model = {
   updateTournamentAfterRoundEnd: tournament => {
     console.log('tournament', tournament.id, 'round', tournament.round, 'ended');
     if (tournament.round < tournament.rounds) {
-      model.startTournamentRound(tournament);
+      const games = model.startTournamentRound(tournament);
       saveData();
       const {emit} = require("../websocket");
-      emit.emitGames();
+      for (const game of games)
+      {
+        emit.emitGame(game);
+      }
       emit.emitTournaments();
       return;
     }
@@ -729,10 +738,12 @@ const model = {
       return;
     }
 
-    model.addAndStartTournamentPlayoffRound(tournament);
+    const games = model.addAndStartTournamentPlayoffRound(tournament);
     saveData();
     const {emit} = require("../websocket");
-    emit.emitGames();
+    for (const game of games) {
+      emit.emitGame(game);
+    }
     emit.emitTournaments();
   },
 
@@ -769,7 +780,8 @@ const model = {
       tournament.userStats[sittingOutUserId].points += 1;
     }
     console.log('added playoff round to tournament', _.pick(tournament, ['id', 'name', 'gameCount', 'start', 'finished', 'round']));
-    model.startTournamentRound(tournament);
+    const games = model.startTournamentRound(tournament);
+    return games;
   },
 
   updateTournamentAfterLastRoundEnd: tournament => {

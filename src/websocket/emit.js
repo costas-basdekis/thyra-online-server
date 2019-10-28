@@ -33,7 +33,15 @@ const emit = {
 
   emitGames: (socket = io) => {
     const {persistence: {globalData}} = require("../data");
-    socket.emit("games", Object.values(globalData.games).map(game => ({
+    socket.emit("games", Object.values(globalData.games).map(emit.serializeGameForEmit));
+  },
+
+  emitGame: (game, socket = io) => {
+    socket.emit("game", emit.serializeGameForEmit(game));
+  },
+
+  serializeGameForEmit: game => {
+    return {
       ..._.pick(game, [
         'id', 'userIds', 'finished', 'winner', 'winnerUserId', 'nextUserId', 'move', 'chainCount',
         'initialPlayerA', 'initialPlayerB', 'resultingPlayerAScore', 'resultingPlayerBScore', 'tournamentId',
@@ -43,7 +51,7 @@ const emit = {
       endDatetime: game.endDatetime ? game.endDatetime.toISOString() : null,
       movesDatetimes: game.movesDatetimes.map(datetime => datetime.toISOString()),
       tooShortToResign: model.isGameTooShortToResign(game),
-    })));
+    };
   },
 
   emitTournaments: (socket = io) => {
