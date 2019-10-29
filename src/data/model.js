@@ -1189,21 +1189,26 @@ const model = {
     }
   },
 
+  getGameResignDatetime: game => {
+    if (game.finished) {
+      return null;
+    }
+    if (model.isGameTooShortToResign(game)) {
+      return null;
+    }
+    if (game.tournamentId) {
+      return null;
+    }
+    const lastDatetime = game.movesDatetimes[game.movesDatetimes.length - 1] || game.startDatetime;
+    const resignDatetime = lastDatetime.add(1, 'day');
+    return resignDatetime;
+  },
+
   resignOldGames: () => {
     const now = moment();
     const gamesToResign = Object.values(globalData.games).filter(game => {
-      if (game.finished) {
-        return false;
-      }
-      if (model.isGameTooShortToResign(game)) {
-        return false;
-      }
-      if (game.tournamentId) {
-        return false;
-      }
-      const lastDatetime = game.movesDatetimes[game.movesDatetimes.length - 1] || game.startDatetime;
-      const resignDatetime = lastDatetime.add(1, 'day');
-      if (resignDatetime.isAfter(now)) {
+      const resignDatetime = model.getGameResignDatetime(game);
+      if (!resignDatetime || resignDatetime.isAfter(now)) {
         return false;
       }
 
