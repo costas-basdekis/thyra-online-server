@@ -173,7 +173,14 @@ const model = {
     const hasCreatedChallenges = userIdsWithChallenges
       ? userIdsWithChallenges.has(user.id)
       : !!Object.values(globalData.challenges).find(challenge => challenge.userId === user.id);
-    return !user.online && !user.passwordHash && !hasGames && !hasTournaments && !hasChallenges;
+    return (
+      !user.online
+      && !user.passwordHash
+      && !hasGames
+      && !hasTournaments
+      && !hasChallenges
+      && !hasCreatedChallenges
+    );
   },
 
   disconnectUser: (user, socket) => {
