@@ -70,6 +70,9 @@ class Connection {
       }
       this.user = user;
       emit.emitUser(this.user);
+      emit.emitUsers(this.socket);
+      emit.emitChallenges(this.socket);
+      emit.emitPersonalChallenges([this.user.id]);
     }
   });
 
