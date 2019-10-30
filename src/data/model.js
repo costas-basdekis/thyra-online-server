@@ -364,7 +364,7 @@ const model = {
         console.log("User", _.pick(user, ['id', 'name']), "aborted game", _.pick(game, ['id', 'userIds', 'tournamentId', 'moveCount']));
         delete globalData.games[game.id];
         saveData();
-        emit.emitGame(game);
+        emit.emitDeletedGame(game);
         return;
       }
       const userPlayer = game.userIds[0] === user.id ? Game.PLAYER_A : Game.PLAYER_B;

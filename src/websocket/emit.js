@@ -31,6 +31,7 @@ const emit = {
     })));
   },
 
+
   emitGames: (socket = io) => {
     const {persistence: {globalData}} = require("../data");
     socket.emit("games", Object.values(globalData.games).map(emit.serializeGameForEmit));
@@ -38,6 +39,10 @@ const emit = {
 
   emitGame: (game, socket = io) => {
     socket.emit("game", emit.serializeGameForEmit(game));
+  },
+
+  emitDeletedGame: (game, socket = io) => {
+    socket.emit("deleted-game", game.id);
   },
 
   serializeGameForEmit: game => {
