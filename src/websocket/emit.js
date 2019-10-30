@@ -69,7 +69,7 @@ const emit = {
     socket.emit("challenges", Object.values(globalData.challenges)
       .filter(challenge => challenge.meta.public && challenge.meta.publishDatetime.isSameOrBefore())
       .map(challenge => ({
-        ..._.pick(challenge, ['id', 'userId', 'options', 'meta']),
+        ..._.pick(challenge, ['id', 'userId', 'options', 'meta', 'usersStats']),
         startingPosition: _.pick(challenge.startingPosition, ['position']),
       })));
   },
@@ -86,7 +86,7 @@ const emit = {
       for (const socket of user.sockets) {
         socket.emit("personal-challenges", userPersonalChallenges
           .map(challenge => ({
-            ..._.pick(challenge, ['id', 'userId', 'options', 'meta', 'startingPosition']),
+            ..._.pick(challenge, ['id', 'userId', 'options', 'meta', 'startingPosition', 'usersStats']),
             isMyChallenge: true,
           })));
       }

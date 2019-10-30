@@ -567,3 +567,28 @@ addMigration({
     }
   },
 });
+
+addMigration({
+  description: "Add challenge users stats",
+  migrate: data => {
+    const users = data.users;
+    for (const challenge of data.challenges) {
+      const userChallenges = users
+        .map(user => [user.challenges[challenge.id], user])
+        .filter(([userChallenge]) => userChallenge);
+      challenge.usersStats = {
+        perfect: userChallenges
+          .filter(([userChallenge]) => userChallenge.meta.won && !userChallenge.meta.mistakes)
+          .length,
+        imperfect: userChallenges
+          .filter(([userChallenge]) => userChallenge.meta.won)
+          .length,
+        attempted: userChallenges
+          .length,
+        averagePerfectScore: parseInt(_.mean(userChallenges
+          .filter(([userChallenge]) => userChallenge.meta.won && !userChallenge.meta.mistakes)
+          .map(([, user]) => user.score)).toFixed(), 10),
+      };
+    }
+  },
+});

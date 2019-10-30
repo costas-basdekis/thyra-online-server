@@ -846,6 +846,13 @@ const model = {
     }
     cleanedChallenge.id = id;
     cleanedChallenge.meta.createdDatetime = moment();
+    cleanedChallenge.usersStats = {
+      perfect: 0,
+      imperfect: 0,
+      attempted: 0,
+      averagePerfectScore: null,
+    };
+
 
     console.log('new challenge', _.pick(cleanedChallenge, ['id', 'userId']));
     globalData.challenges[cleanedChallenge.id] = cleanedChallenge;
@@ -872,6 +879,7 @@ const model = {
     const cleanedChallenge = model.cleanChallenge(user, challenge);
     cleanedChallenge.id = storedChallenge.id;
     cleanedChallenge.meta.createdDatetime = storedChallenge.meta.createdDatetime;
+    cleanedChallenge.usersStats = storedChallenge.usersStats;
 
     console.log('update challenge', _.pick(cleanedChallenge, ['id', 'userId']));
     globalData.challenges[cleanedChallenge.id] = cleanedChallenge;
@@ -1148,6 +1156,8 @@ const model = {
     const {emit} = require("../websocket");
     model.updateUserChallengesStats(user);
     emit.emitUser(user);
+    model.updateChallengeStats(challenge);
+    emit.emitChallenges();
   },
 
   updateUserChallengesStats: user => {
@@ -1164,6 +1174,26 @@ const model = {
       perfectStars: _.sum(Object.entries(user.challenges)
         .filter(([, userChallenge]) => userChallenge.meta.won && !userChallenge.meta.mistakes)
         .map(([challengeId]) => globalData.challenges[challengeId].meta.difficulty)),
+    };
+  },
+
+  updateChallengeStats: challenge => {
+    const users = Object.values(globalData.users);
+    const userChallenges = users
+      .map(user => [user.challenges[challenge.id], user])
+      .filter(([userChallenge]) => userChallenge);
+    challenge.usersStats = {
+      perfect: userChallenges
+        .filter(([userChallenge]) => userChallenge.meta.won && !userChallenge.meta.mistakes)
+        .length,
+      imperfect: userChallenges
+        .filter(([userChallenge]) => userChallenge.meta.won)
+        .length,
+      attempted: userChallenges
+        .length,
+      averagePerfectScore: parseInt(_.mean(userChallenges
+        .filter(([userChallenge]) => userChallenge.meta.won && !userChallenge.meta.mistakes)
+        .map(([, user]) => user.score)).toFixed(), 10),
     };
   },
 
