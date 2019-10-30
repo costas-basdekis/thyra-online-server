@@ -544,3 +544,26 @@ addMigration({
     }
   },
 });
+
+addMigration({
+  description: "Add user challenges stats",
+  migrate: data => {
+    const challengesById = _.fromPairs(data.challenges.map(challenge => [challenge.id, challenge]));
+    for (const user of data.users) {
+      const userChallenges = Object.values(user.challenges);
+      user.challengesStats = {
+        perfect: userChallenges
+          .filter(userChallenge => userChallenge.meta.won && !userChallenge.meta.mistakes)
+          .length,
+        imperfect: userChallenges
+          .filter(userChallenge => userChallenge.meta.won)
+          .length,
+        attempted: userChallenges
+          .length,
+        perfectStars: _.sum(Object.entries(user.challenges)
+          .filter(([, userChallenge]) => userChallenge.meta.won && !userChallenge.meta.mistakes)
+          .map(([challengeId]) => challengesById[challengeId].meta.difficulty)),
+      };
+    }
+  },
+});

@@ -49,6 +49,12 @@ const model = {
       tournamentCount: 0,
       tournamentWinCount: 0,
       challenges: {},
+      challengesStats: {
+        perfect: 0,
+        imperfect: 0,
+        attempted: 0,
+        perfectStars: 0,
+      },
     };
     globalData.users[user.id] = user;
     saveData();
@@ -1140,7 +1146,25 @@ const model = {
     }
     saveData();
     const {emit} = require("../websocket");
+    model.updateUserChallengesStats(user);
     emit.emitUser(user);
+  },
+
+  updateUserChallengesStats: user => {
+    const userChallenges = Object.values(user.challenges);
+    user.challengesStats = {
+      perfect: userChallenges
+        .filter(userChallenge => userChallenge.meta.won && !userChallenge.meta.mistakes)
+        .length,
+      imperfect: userChallenges
+        .filter(userChallenge => userChallenge.meta.won)
+        .length,
+      attempted: userChallenges
+        .length,
+      perfectStars: _.sum(Object.entries(user.challenges)
+        .filter(([, userChallenge]) => userChallenge.meta.won && !userChallenge.meta.mistakes)
+        .map(([challengeId]) => globalData.challenges[challengeId].meta.difficulty)),
+    };
   },
 
   cleanupUsersAndGames: () => {
