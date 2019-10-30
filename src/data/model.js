@@ -468,7 +468,11 @@ const model = {
   },
 
   isGameTooShortToResign: game => {
-    return !game.tournamentId && game.move < 5;
+    return (
+      !game.tournamentId
+      && game.move < 5
+      && !Object.values(globalData.challenges).find(challenge => challenge.meta.gameId === game.id)
+    );
   },
 
   createTournament: (creator, {name, gameCount}) => {
@@ -904,6 +908,7 @@ const model = {
         meta: {
           difficulty: 1,
           maxDifficulty: 5,
+          gameId: null,
         },
       },
     };
@@ -961,6 +966,16 @@ const model = {
     if (typeof challenge.meta.source !== typeof '') {
       console.log('invalid challenge: `meta.source` is not a string');
       return null;
+    }
+    if (challenge.meta.gameId !== null){
+      if (typeof challenge.meta.gameId !== typeof '') {
+        console.log('invalid challenge: `meta.gameId` is not a string or null');
+        return null;
+      }
+      if (!(challenge.meta.gameId in globalData.games)) {
+        console.log('invalid challenge: `meta.gameId` was not a valid game ID', challenge.meta.gameId);
+        return null;
+      }
     }
     if (typeof challenge.meta.public !== typeof true) {
       console.log('invalid challenge: `meta.public` is not a boolean');
@@ -1060,7 +1075,7 @@ const model = {
         typeOptions: _.pick(challenge.options.typeOptions, ['mateIn']),
       },
       meta: {
-        ..._.pick(challenge.meta, ['source', 'difficulty', 'maxDifficulty', 'public', 'publishDatetime']),
+        ..._.pick(challenge.meta, ['source', 'gameId', 'difficulty', 'maxDifficulty', 'public', 'publishDatetime']),
       },
       startingPosition: cleanPosition(challenge.startingPosition, 'playerResponses'),
     };

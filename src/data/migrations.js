@@ -592,3 +592,12 @@ addMigration({
     }
   },
 });
+
+addMigration({
+  description: "Add challenge game link",
+  migrate: data => {
+    for (const challenge of data.challenges) {
+      challenge.meta.gameId = null;
+    }
+  },
+});
