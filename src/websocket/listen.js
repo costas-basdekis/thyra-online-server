@@ -58,8 +58,8 @@ class Connection {
     emit.emitUsers(this.socket);
     emit.emitGames(this.socket);
     emit.emitTournaments(this.socket);
-    emit.emitChallenges(this.socket);
-    emit.emitPersonalChallenges([this.user.id]);
+    emit.emitPuzzles(this.socket);
+    emit.emitPersonalPuzzles([this.user.id]);
   });
 
   logIn = this.on('log-in', async ({name, password, mergeUsers}) => {
@@ -71,8 +71,8 @@ class Connection {
       this.user = user;
       emit.emitUser(this.user);
       emit.emitUsers(this.socket);
-      emit.emitChallenges(this.socket);
-      emit.emitPersonalChallenges([this.user.id]);
+      emit.emitPuzzles(this.socket);
+      emit.emitPersonalPuzzles([this.user.id]);
     }
   });
 
@@ -171,34 +171,34 @@ class Connection {
     model.abortTournament(this.user, tournamentId);
   });
 
-  createChallenge = this.on('create-challenge', challenge => {
+  createPuzzle = this.on('create-puzzle', puzzle => {
     if (!this.user) {
       return;
     }
 
-    model.createChallenge(this.user, challenge);
+    model.createPuzzle(this.user, puzzle);
   });
 
-  updateChallenge = this.on('update-challenge', challenge => {
+  updatePuzzle = this.on('update-puzzle', puzzle => {
     if (!this.user) {
       return;
     }
 
-    model.updateChallenge(this.user, challenge);
+    model.updatePuzzle(this.user, puzzle);
   });
 
-  submitChallengeMoves = this.on('submit-challenge-moves', ({id, path}) => {
+  submitPuzzleMoves = this.on('submit-puzzle-moves', ({id, path}) => {
     if (!this.user) {
       return;
     }
 
-    const challenge = globalData.challenges[id];
-    if (!challenge) {
-      console.log("Challenge not recognised", id);
+    const puzzle = globalData.puzzles[id];
+    if (!puzzle) {
+      console.log("Puzzle not recognised", id);
       return;
     }
 
-    model.submitChallengeMoves(challenge, this.user, path);
+    model.submitPuzzleMoves(puzzle, this.user, path);
   });
 
   disconnect = this.on('disconnect', () => {

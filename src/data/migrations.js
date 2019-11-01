@@ -601,3 +601,43 @@ addMigration({
     }
   },
 });
+
+addMigration({
+  description: "Rename challenges to puzzles",
+  migrate: data => {
+    const fixStep = step => {
+      if ('challengeResponse' in step) {
+        step.puzzleResponse = step.challengeResponse;
+        delete step.challengeResponse;
+        if (step.puzzleResponse) {
+          fixStep(step.puzzleResponse);
+        }
+      } else if ('puzzleResponse' in step) {
+        if (step.puzzleResponse) {
+          fixStep(step.puzzleResponse);
+        }
+      } else if ('playerResponses' in step) {
+        for (const nextStep of step.playerResponses) {
+          fixStep(nextStep);
+        }
+      } else if ('startingPosition' in step) {
+        fixStep(step.startingPosition);
+      } else {
+        throw Error(`Unknown step type ${Object.keys(step).join(', ')}`);
+      }
+    };
+    for (const user of data.users) {
+      user.puzzles = user.challenges;
+      delete user.challenges;
+      user.puzzlesStats = user.challengesStats;
+      delete user.challengesStats;
+      for (const userPuzzle of Object.values(user.puzzles)) {
+        fixStep(userPuzzle);
+      }
+    }
+    data.puzzles = data.challenges;
+    for (const puzzle of data.puzzles) {
+      fixStep(puzzle);
+    }
+  },
+});

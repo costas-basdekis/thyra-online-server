@@ -47,12 +47,12 @@ const prepareDataForSave = data => {
       endDatetime: tournament.endDatetime ? tournament.endDatetime.toISOString() : null,
       createdDatetime: tournament.createdDatetime.toISOString(),
     })),
-    challenges: Object.values(data.challenges).map(challenge => ({
-      ...challenge,
+    puzzles: Object.values(data.puzzles).map(puzzle => ({
+      ...puzzle,
       meta: {
-        ...challenge.meta,
-        createdDatetime: challenge.meta.createdDatetime.toISOString(),
-        publishDatetime: challenge.meta.publishDatetime ? challenge.meta.publishDatetime.toISOString() : null,
+        ...puzzle.meta,
+        createdDatetime: puzzle.meta.createdDatetime.toISOString(),
+        publishDatetime: puzzle.meta.publishDatetime ? puzzle.meta.publishDatetime.toISOString() : null,
       },
     })),
   };
@@ -81,12 +81,12 @@ const prepareDataFromLoad = dataFromLoad => {
       endDatetime: tournament.endDatetime ? moment(tournament.endDatetime) : null,
       createdDatetime: moment(tournament.createdDatetime),
     }])),
-    challenges: _.fromPairs(dataFromLoad.challenges.map(challenge => [challenge.id, {
-      ...challenge,
+    puzzles: _.fromPairs(dataFromLoad.puzzles.map(puzzle => [puzzle.id, {
+      ...puzzle,
       meta: {
-        ...challenge.meta,
-        createdDatetime: moment(challenge.meta.createdDatetime),
-        publishDatetime: challenge.meta.publishDatetime ? moment(challenge.meta.publishDatetime) : null,
+        ...puzzle.meta,
+        createdDatetime: moment(puzzle.meta.createdDatetime),
+        publishDatetime: puzzle.meta.publishDatetime ? moment(puzzle.meta.publishDatetime) : null,
       },
     }])),
   };

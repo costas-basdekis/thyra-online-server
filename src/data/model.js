@@ -48,8 +48,8 @@ const model = {
       winCount: 0,
       tournamentCount: 0,
       tournamentWinCount: 0,
-      challenges: {},
-      challengesStats: {
+      puzzles: {},
+      puzzlesStats: {
         perfect: 0,
         imperfect: 0,
         attempted: 0,
@@ -147,8 +147,8 @@ const model = {
           pairing.userIds = pairing.userIds.map(userId => userId === mergedUser.id ? user.id : userId);
         }
       }
-      for (const challenge of Object.values(globalData.challenges)) {
-        challenge.userId = challenge.userId === mergedUser.id ? user.id : challenge.userId;
+      for (const puzzle of Object.values(globalData.puzzles)) {
+        puzzle.userId = puzzle.userId === mergedUser.id ? user.id : puzzle.userId;
       }
     }
     delete globalData.users[mergedUser.id];
@@ -167,7 +167,7 @@ const model = {
     }
   },
 
-  shouldDeleteUser(user, {userIdsWithGames = null, userIdsWithTournaments = null, userIdsWithChallenges = null} = {}) {
+  shouldDeleteUser(user, {userIdsWithGames = null, userIdsWithTournaments = null, userIdsWithPuzzles = null} = {}) {
     const hasGames = userIdsWithGames
       ? userIdsWithGames.has(user.id)
       : !!Object.values(globalData.games).find(game => game.userIds.includes(user.id));
@@ -175,17 +175,17 @@ const model = {
       ? userIdsWithTournaments.has(user.id)
       : !!Object.values(globalData.tournaments).find(tournament =>
       tournament.userIds.includes(user.id) || tournament.creatorUserId === user.id);
-    const hasChallenges = !!Object.values(user.challenges).length;
-    const hasCreatedChallenges = userIdsWithChallenges
-      ? userIdsWithChallenges.has(user.id)
-      : !!Object.values(globalData.challenges).find(challenge => challenge.userId === user.id);
+    const hasPuzzles = !!Object.values(user.puzzles).length;
+    const hasCreatedPuzzles = userIdsWithPuzzles
+      ? userIdsWithPuzzles.has(user.id)
+      : !!Object.values(globalData.puzzles).find(puzzle => puzzle.userId === user.id);
     return (
       !user.online
       && !user.passwordHash
       && !hasGames
       && !hasTournaments
-      && !hasChallenges
-      && !hasCreatedChallenges
+      && !hasPuzzles
+      && !hasCreatedPuzzles
     );
   },
 
@@ -471,7 +471,7 @@ const model = {
     return (
       !game.tournamentId
       && game.move < 5
-      && !Object.values(globalData.challenges).find(challenge => challenge.meta.gameId === game.id)
+      && !Object.values(globalData.puzzles).find(puzzle => puzzle.meta.gameId === game.id)
     );
   },
 
@@ -839,18 +839,18 @@ const model = {
     emit.emitTournaments();
   },
 
-  createChallenge: (user, challenge) => {
+  createPuzzle: (user, puzzle) => {
     let id = uuid4();
-    while (id in globalData.challenges) {
+    while (id in globalData.puzzles) {
       id = uuid4();
     }
-    const cleanedChallenge = model.cleanChallenge(user, challenge);
-    if (!cleanedChallenge) {
+    const cleanedPuzzle = model.cleanPuzzle(user, puzzle);
+    if (!cleanedPuzzle) {
       return;
     }
-    cleanedChallenge.id = id;
-    cleanedChallenge.meta.createdDatetime = moment();
-    cleanedChallenge.usersStats = {
+    cleanedPuzzle.id = id;
+    cleanedPuzzle.meta.createdDatetime = moment();
+    cleanedPuzzle.usersStats = {
       perfect: 0,
       imperfect: 0,
       attempted: 0,
@@ -858,47 +858,47 @@ const model = {
     };
 
 
-    console.log('new challenge', _.pick(cleanedChallenge, ['id', 'userId']));
-    globalData.challenges[cleanedChallenge.id] = cleanedChallenge;
+    console.log('new puzzle', _.pick(cleanedPuzzle, ['id', 'userId']));
+    globalData.puzzles[cleanedPuzzle.id] = cleanedPuzzle;
     saveData();
     const {emit} = require("../websocket");
-    emit.emitChallenges();
-    emit.emitPersonalChallenges([user.id]);
+    emit.emitPuzzles();
+    emit.emitPersonalPuzzles([user.id]);
 
-    return cleanedChallenge;
+    return cleanedPuzzle;
   },
 
-  updateChallenge(user, challenge) {
-    const storedChallenge = globalData.challenges[challenge.id];
-    if (!storedChallenge) {
-      console.log('challenge not found', challenge.id);
+  updatePuzzle(user, puzzle) {
+    const storedPuzzle = globalData.puzzles[puzzle.id];
+    if (!storedPuzzle) {
+      console.log('puzzle not found', puzzle.id);
       return;
     }
 
-    if (storedChallenge.userId !== user.id) {
-      console.log('user', _.pick(user, ['id', 'name']), 'does not own challenge', challenge.id);
+    if (storedPuzzle.userId !== user.id) {
+      console.log('user', _.pick(user, ['id', 'name']), 'does not own puzzle', puzzle.id);
       return;
     }
 
-    const cleanedChallenge = model.cleanChallenge(user, challenge);
-    cleanedChallenge.id = storedChallenge.id;
-    cleanedChallenge.meta.createdDatetime = storedChallenge.meta.createdDatetime;
-    cleanedChallenge.usersStats = storedChallenge.usersStats;
+    const cleanedPuzzle = model.cleanPuzzle(user, puzzle);
+    cleanedPuzzle.id = storedPuzzle.id;
+    cleanedPuzzle.meta.createdDatetime = storedPuzzle.meta.createdDatetime;
+    cleanedPuzzle.usersStats = storedPuzzle.usersStats;
 
-    console.log('update challenge', _.pick(cleanedChallenge, ['id', 'userId']));
-    globalData.challenges[cleanedChallenge.id] = cleanedChallenge;
+    console.log('update puzzle', _.pick(cleanedPuzzle, ['id', 'userId']));
+    globalData.puzzles[cleanedPuzzle.id] = cleanedPuzzle;
     saveData();
     const {emit} = require("../websocket");
-    emit.emitChallenges();
-    emit.emitPersonalChallenges([user.id]);
+    emit.emitPuzzles();
+    emit.emitPersonalPuzzles([user.id]);
 
-    return cleanedChallenge;
+    return cleanedPuzzle;
   },
 
-  cleanChallenge: (user, challenge) => {
+  cleanPuzzle: (user, puzzle) => {
     // For type-hinting
     // noinspection JSUnusedLocalSymbols
-    const defaultChallenge = {
+    const defaultPuzzle = {
       options: {
         initialPlayer: Game.PLAYER_A,
         type: 'mate',
@@ -912,103 +912,103 @@ const model = {
         },
       },
     };
-    if (!challenge.options) {
-      console.log('invalid challenge: no `options`');
+    if (!puzzle.options) {
+      console.log('invalid puzzle: no `options`');
       return null;
     }
-    if (!['mate', 'avoidMate'].includes(challenge.options.type)) {
-      console.log(`invalid challenge: unknown \`options.type\` of \`${challenge.options.type}\``);
+    if (!['mate', 'avoidMate'].includes(puzzle.options.type)) {
+      console.log(`invalid puzzle: unknown \`options.type\` of \`${puzzle.options.type}\``);
       return null;
     }
-    if (!challenge.options.typeOptions) {
-      console.log('invalid challenge: no `options.typeOptions`');
+    if (!puzzle.options.typeOptions) {
+      console.log('invalid puzzle: no `options.typeOptions`');
       return null;
     }
-    if (challenge.options.type === 'mate') {
-      if (typeof challenge.options.typeOptions.mateIn !== typeof 1 || isNaN(challenge.options.typeOptions.mateIn)) {
-        console.log('invalid challenge: `options.typeOptions.mateIn` is not a number');
+    if (puzzle.options.type === 'mate') {
+      if (typeof puzzle.options.typeOptions.mateIn !== typeof 1 || isNaN(puzzle.options.typeOptions.mateIn)) {
+        console.log('invalid puzzle: `options.typeOptions.mateIn` is not a number');
         return null;
       }
-      if (parseInt(challenge.options.typeOptions.mateIn, 10) !== challenge.options.typeOptions.mateIn) {
-        console.log('invalid challenge: `options.typeOptions.mateIn` is not an integer');
+      if (parseInt(puzzle.options.typeOptions.mateIn, 10) !== puzzle.options.typeOptions.mateIn) {
+        console.log('invalid puzzle: `options.typeOptions.mateIn` is not an integer');
         return
       }
-      if (challenge.options.typeOptions.mateIn < 1 || challenge.options.typeOptions.mateIn > 10) {
-        console.log('invalid challenge: `options.typeOptions.mateIn` is out of range');
+      if (puzzle.options.typeOptions.mateIn < 1 || puzzle.options.typeOptions.mateIn > 10) {
+        console.log('invalid puzzle: `options.typeOptions.mateIn` is out of range');
         return null;
       }
-    } else if (challenge.options.type === 'avoidMate') {
-      if (typeof challenge.options.typeOptions.mateIn !== typeof 1 || isNaN(challenge.options.typeOptions.mateIn)) {
-        console.log('invalid challenge: `options.typeOptions.mateIn` is not a number');
+    } else if (puzzle.options.type === 'avoidMate') {
+      if (typeof puzzle.options.typeOptions.mateIn !== typeof 1 || isNaN(puzzle.options.typeOptions.mateIn)) {
+        console.log('invalid puzzle: `options.typeOptions.mateIn` is not a number');
         return null;
       }
-      if (parseInt(challenge.options.typeOptions.mateIn, 10) !== challenge.options.typeOptions.mateIn) {
-        console.log('invalid challenge: `options.typeOptions.mateIn` is not an integer');
+      if (parseInt(puzzle.options.typeOptions.mateIn, 10) !== puzzle.options.typeOptions.mateIn) {
+        console.log('invalid puzzle: `options.typeOptions.mateIn` is not an integer');
         return
       }
-      if (challenge.options.typeOptions.mateIn < 1 || challenge.options.typeOptions.mateIn > 10) {
-        console.log('invalid challenge: `options.typeOptions.mateIn` is out of range');
+      if (puzzle.options.typeOptions.mateIn < 1 || puzzle.options.typeOptions.mateIn > 10) {
+        console.log('invalid puzzle: `options.typeOptions.mateIn` is out of range');
         return null;
       }
     }
-    if (!Game.PLAYERS.includes(challenge.options.initialPlayer)) {
-      console.log('invalid challenge: `challenge.initialPlayer` is not player A or B');
+    if (!Game.PLAYERS.includes(puzzle.options.initialPlayer)) {
+      console.log('invalid puzzle: `puzzle.initialPlayer` is not player A or B');
       return null;
     }
-    if (typeof challenge.meta.difficulty !== typeof 1 || isNaN(challenge.meta.difficulty)) {
-      console.log('invalid challenge: `meta.difficulty` is not a number');
+    if (typeof puzzle.meta.difficulty !== typeof 1 || isNaN(puzzle.meta.difficulty)) {
+      console.log('invalid puzzle: `meta.difficulty` is not a number');
       return null;
     }
-    if (parseInt(challenge.meta.difficulty, 10) !== challenge.meta.difficulty) {
-      console.log('invalid challenge: `meta.difficulty` is not an integer');
+    if (parseInt(puzzle.meta.difficulty, 10) !== puzzle.meta.difficulty) {
+      console.log('invalid puzzle: `meta.difficulty` is not an integer');
       return null;
     }
-    if (typeof challenge.meta.source !== typeof '') {
-      console.log('invalid challenge: `meta.source` is not a string');
+    if (typeof puzzle.meta.source !== typeof '') {
+      console.log('invalid puzzle: `meta.source` is not a string');
       return null;
     }
-    if (challenge.meta.gameId !== null){
-      if (typeof challenge.meta.gameId !== typeof '') {
-        console.log('invalid challenge: `meta.gameId` is not a string or null');
+    if (puzzle.meta.gameId !== null){
+      if (typeof puzzle.meta.gameId !== typeof '') {
+        console.log('invalid puzzle: `meta.gameId` is not a string or null');
         return null;
       }
-      if (!(challenge.meta.gameId in globalData.games)) {
-        console.log('invalid challenge: `meta.gameId` was not a valid game ID', challenge.meta.gameId);
+      if (!(puzzle.meta.gameId in globalData.games)) {
+        console.log('invalid puzzle: `meta.gameId` was not a valid game ID', puzzle.meta.gameId);
         return null;
       }
     }
-    if (typeof challenge.meta.public !== typeof true) {
-      console.log('invalid challenge: `meta.public` is not a boolean');
+    if (typeof puzzle.meta.public !== typeof true) {
+      console.log('invalid puzzle: `meta.public` is not a boolean');
       return null;
     }
-    if (challenge.meta.publishDatetime) {
-      if (!moment(challenge.meta.publishDatetime).isValid()) {
-        console.log('invalid challenge: `meta.publishDatetime` is not valid');
+    if (puzzle.meta.publishDatetime) {
+      if (!moment(puzzle.meta.publishDatetime).isValid()) {
+        console.log('invalid puzzle: `meta.publishDatetime` is not valid');
         return null;
       }
-      challenge.meta.publishDatetime = moment(challenge.meta.publishDatetime);
+      puzzle.meta.publishDatetime = moment(puzzle.meta.publishDatetime);
     } else {
-      if (challenge.meta.public) {
-        challenge.meta.publishDatetime = moment();
+      if (puzzle.meta.public) {
+        puzzle.meta.publishDatetime = moment();
       }
     }
-    if (challenge.meta.difficulty < 1 || challenge.meta.difficulty > 3) {
-      console.log('invalid challenge: `meta.difficulty` is out of range');
+    if (puzzle.meta.difficulty < 1 || puzzle.meta.difficulty > 3) {
+      console.log('invalid puzzle: `meta.difficulty` is out of range');
       return null;
     }
-    if (challenge.meta.maxDifficulty !== 3) {
-      console.log('invalid challenge: `meta.maxDifficulty` is not 3');
+    if (puzzle.meta.maxDifficulty !== 3) {
+      console.log('invalid puzzle: `meta.maxDifficulty` is not 3');
       return null;
     }
-    if (!challenge.startingPosition) {
-      console.log('invalid challenge: `startingPosition` is missing');
+    if (!puzzle.startingPosition) {
+      console.log('invalid puzzle: `startingPosition` is missing');
       return null;
     }
-    const validatePositions = [[challenge.startingPosition, null, 'playerResponses']];
+    const validatePositions = [[puzzle.startingPosition, null, 'playerResponses']];
     while (validatePositions.length) {
       const [position, previousGame, positionType] = validatePositions.shift();
       if (!Game.isValidCompressedPositionNotation(position.position)) {
-        console.log('invalid challenge: position has not valid `position`');
+        console.log('invalid puzzle: position has not valid `position`');
         return null;
       }
       let game;
@@ -1018,35 +1018,35 @@ const model = {
         try {
           game = previousGame.makeMoves(position.moves);
         } catch (e) {
-          console.log('invalid challenge: moves are invalid');
+          console.log('invalid puzzle: moves are invalid');
           return null;
         }
         if (game.moveCount !== previousGame.moveCount + 1) {
-          console.log('invalid challenge: too many or too few moves');
+          console.log('invalid puzzle: too many or too few moves');
           return null;
         }
         if (game.nextPlayer === previousGame.nextPlayer) {
-          console.log('invalid challenge: too many or too few moves');
+          console.log('invalid puzzle: too many or too few moves');
           return null;
         }
         if (game.positionNotation !== position.position) {
-          console.log('invalid challenge: position notation does\'t match moves');
+          console.log('invalid puzzle: position notation does\'t match moves');
           return null;
         }
       }
       if (positionType === 'playerResponses') {
         if (!Array.isArray(position.playerResponses)) {
-          console.log('invalid challenge: player response position doesn\'t have player responses');
+          console.log('invalid puzzle: player response position doesn\'t have player responses');
           return null;
         }
         for (const nextPosition of position.playerResponses) {
-          validatePositions.push([nextPosition, game, 'challengeResponse']);
+          validatePositions.push([nextPosition, game, 'puzzleResponse']);
         }
       } else {
-        if (position.challengeResponse) {
-          validatePositions.push([position.challengeResponse, game, 'playerResponses']);
-        } else if (position.challengeResponse !== null) {
-          console.log('invalid challenge: challenge response position doesn\'t have challenge response field');
+        if (position.puzzleResponse) {
+          validatePositions.push([position.puzzleResponse, game, 'playerResponses']);
+        } else if (position.puzzleResponse !== null) {
+          console.log('invalid puzzle: puzzle response position doesn\'t have puzzle response field');
           return null;
         }
       }
@@ -1056,158 +1056,158 @@ const model = {
       if (positionType === 'playerResponses') {
         return {
           ..._.pick(position, ['position', 'moves']),
-          playerResponses: position.playerResponses.map(nextPosition => cleanPosition(nextPosition, 'challengeResponse')),
+          playerResponses: position.playerResponses.map(nextPosition => cleanPosition(nextPosition, 'puzzleResponse')),
         };
       } else {
         return {
           ..._.pick(position, ['position', 'moves']),
-          challengeResponse: position.challengeResponse
-            ? cleanPosition(position.challengeResponse, 'playerResponses')
+          puzzleResponse: position.puzzleResponse
+            ? cleanPosition(position.puzzleResponse, 'playerResponses')
             : null,
         };
       }
     };
 
-    const cleanedChallenge = {
+    const cleanedPuzzle = {
       userId: user.id,
       options: {
-        ..._.pick(challenge.options, ['initialPlayer', 'type', ]),
-        typeOptions: _.pick(challenge.options.typeOptions, ['mateIn']),
+        ..._.pick(puzzle.options, ['initialPlayer', 'type', ]),
+        typeOptions: _.pick(puzzle.options.typeOptions, ['mateIn']),
       },
       meta: {
-        ..._.pick(challenge.meta, ['source', 'gameId', 'difficulty', 'maxDifficulty', 'public', 'publishDatetime']),
+        ..._.pick(puzzle.meta, ['source', 'gameId', 'difficulty', 'maxDifficulty', 'public', 'publishDatetime']),
       },
-      startingPosition: cleanPosition(challenge.startingPosition, 'playerResponses'),
+      startingPosition: cleanPosition(puzzle.startingPosition, 'playerResponses'),
     };
 
-    return cleanedChallenge;
+    return cleanedPuzzle;
   },
 
-  submitChallengeMoves: (challenge, user, path) => {
+  submitPuzzleMoves: (puzzle, user, path) => {
     if (!path || !path.length) {
-      console.log('missing challenges moves');
+      console.log('missing puzzles moves');
       return;
     }
 
-    const userChallenge = user.challenges[challenge.id] = user.challenges[challenge.id] || {
+    const userPuzzle = user.puzzles[puzzle.id] = user.puzzles[puzzle.id] || {
       meta: {
         started: true,
         mistakes: 0,
         won: false,
       },
       startingPosition: {
-        position: challenge.startingPosition.position,
+        position: puzzle.startingPosition.position,
         invalidPlayerPositions: [],
         playerResponses: [],
       },
     };
-    let userChallengeStep = userChallenge.startingPosition;
-    let challengeStep = challenge.startingPosition;
-    let game = Game.fromCompressedPositionNotation(challengeStep.position);
+    let userPuzzleStep = userPuzzle.startingPosition;
+    let puzzleStep = puzzle.startingPosition;
+    let game = Game.fromCompressedPositionNotation(puzzleStep.position);
     for (const moves of path) {
       let nextGame;
       try {
         nextGame = game.makeMoves(moves);
       } catch (e) {
-        console.log('invalid challenge moves');
+        console.log('invalid puzzle moves');
         break;
       }
       if (nextGame.moveCount !== game.moveCount + 1) {
-        console.log('invalid challenge moves: too many or too few moves');
+        console.log('invalid puzzle moves: too many or too few moves');
         break;
       }
       if (nextGame.nextPlayer === game.nextPlayer) {
-        console.log('invalid challenge moves: too many or too few moves');
+        console.log('invalid puzzle moves: too many or too few moves');
         break;
       }
       game = nextGame;
 
-      const validPlayerResponse = challengeStep.playerResponses
+      const validPlayerResponse = puzzleStep.playerResponses
         .find(response => response.position === nextGame.positionNotation);
       if (!validPlayerResponse) {
-        if (!userChallengeStep.invalidPlayerPositions.includes(nextGame.positionNotation)) {
-          userChallengeStep.invalidPlayerPositions.push(nextGame.positionNotation);
-          userChallenge.meta.mistakes += 1;
+        if (!userPuzzleStep.invalidPlayerPositions.includes(nextGame.positionNotation)) {
+          userPuzzleStep.invalidPlayerPositions.push(nextGame.positionNotation);
+          userPuzzle.meta.mistakes += 1;
         }
-        console.log('user', user.id, 'did a wrong move on challenge', challenge.id);
+        console.log('user', user.id, 'did a wrong move on puzzle', puzzle.id);
         break;
       }
-      console.log('user', user.id, 'did a right move on challenge', challenge.id);
+      console.log('user', user.id, 'did a right move on puzzle', puzzle.id);
 
-      let nextUserChallengeStep = userChallengeStep.playerResponses
+      let nextUserPuzzleStep = userPuzzleStep.playerResponses
         .find(response => response.position === validPlayerResponse.position);
-      if (nextUserChallengeStep) {
-        userChallengeStep = nextUserChallengeStep;
+      if (nextUserPuzzleStep) {
+        userPuzzleStep = nextUserPuzzleStep;
       } else {
-        nextUserChallengeStep = {
+        nextUserPuzzleStep = {
           position: validPlayerResponse.position,
           moves: validPlayerResponse.moves,
-          challengeResponse: null,
+          puzzleResponse: null,
         };
-        userChallengeStep.playerResponses.push(nextUserChallengeStep);
-        userChallengeStep = nextUserChallengeStep;
-        if (validPlayerResponse.challengeResponse) {
-          userChallengeStep.challengeResponse = {
-            position: validPlayerResponse.challengeResponse.position,
-            moves: validPlayerResponse.challengeResponse.moves,
+        userPuzzleStep.playerResponses.push(nextUserPuzzleStep);
+        userPuzzleStep = nextUserPuzzleStep;
+        if (validPlayerResponse.puzzleResponse) {
+          userPuzzleStep.puzzleResponse = {
+            position: validPlayerResponse.puzzleResponse.position,
+            moves: validPlayerResponse.puzzleResponse.moves,
             playerResponses: [],
             invalidPlayerPositions: [],
           };
         }
       }
-      userChallengeStep = userChallengeStep.challengeResponse;
-      if (validPlayerResponse.challengeResponse) {
-        game = game.makeMoves(validPlayerResponse.challengeResponse.moves);
+      userPuzzleStep = userPuzzleStep.puzzleResponse;
+      if (validPlayerResponse.puzzleResponse) {
+        game = game.makeMoves(validPlayerResponse.puzzleResponse.moves);
       }
-      challengeStep = validPlayerResponse.challengeResponse;
+      puzzleStep = validPlayerResponse.puzzleResponse;
 
-      if (!challengeStep) {
-        console.log('user', user.id, 'completed a challenge', challenge.id);
-        userChallenge.meta.won = true;
+      if (!puzzleStep) {
+        console.log('user', user.id, 'completed a puzzle', puzzle.id);
+        userPuzzle.meta.won = true;
         break;
       }
     }
     saveData();
     const {emit} = require("../websocket");
-    model.updateUserChallengesStats(user);
+    model.updateUserPuzzlesStats(user);
     emit.emitUser(user);
-    model.updateChallengeStats(challenge);
-    emit.emitChallenges();
+    model.updatePuzzleStats(puzzle);
+    emit.emitPuzzles();
   },
 
-  updateUserChallengesStats: user => {
-    const userChallenges = Object.values(user.challenges);
-    user.challengesStats = {
-      perfect: userChallenges
-        .filter(userChallenge => userChallenge.meta.won && !userChallenge.meta.mistakes)
+  updateUserPuzzlesStats: user => {
+    const userPuzzles = Object.values(user.puzzles);
+    user.puzzlesStats = {
+      perfect: userPuzzles
+        .filter(userPuzzle => userPuzzle.meta.won && !userPuzzle.meta.mistakes)
         .length,
-      imperfect: userChallenges
-        .filter(userChallenge => userChallenge.meta.won)
+      imperfect: userPuzzles
+        .filter(userPuzzle => userPuzzle.meta.won)
         .length,
-      attempted: userChallenges
+      attempted: userPuzzles
         .length,
-      perfectStars: _.sum(Object.entries(user.challenges)
-        .filter(([, userChallenge]) => userChallenge.meta.won && !userChallenge.meta.mistakes)
-        .map(([challengeId]) => globalData.challenges[challengeId].meta.difficulty)),
+      perfectStars: _.sum(Object.entries(user.puzzles)
+        .filter(([, userPuzzle]) => userPuzzle.meta.won && !userPuzzle.meta.mistakes)
+        .map(([puzzleId]) => globalData.puzzles[puzzleId].meta.difficulty)),
     };
   },
 
-  updateChallengeStats: challenge => {
+  updatePuzzleStats: puzzle => {
     const users = Object.values(globalData.users);
-    const userChallenges = users
-      .map(user => [user.challenges[challenge.id], user])
-      .filter(([userChallenge]) => userChallenge);
-    challenge.usersStats = {
-      perfect: userChallenges
-        .filter(([userChallenge]) => userChallenge.meta.won && !userChallenge.meta.mistakes)
+    const userPuzzles = users
+      .map(user => [user.puzzles[puzzle.id], user])
+      .filter(([userPuzzle]) => userPuzzle);
+    puzzle.usersStats = {
+      perfect: userPuzzles
+        .filter(([userPuzzle]) => userPuzzle.meta.won && !userPuzzle.meta.mistakes)
         .length,
-      imperfect: userChallenges
-        .filter(([userChallenge]) => userChallenge.meta.won)
+      imperfect: userPuzzles
+        .filter(([userPuzzle]) => userPuzzle.meta.won)
         .length,
-      attempted: userChallenges
+      attempted: userPuzzles
         .length,
-      averagePerfectScore: parseInt(_.mean(userChallenges
-        .filter(([userChallenge]) => userChallenge.meta.won && !userChallenge.meta.mistakes)
+      averagePerfectScore: parseInt(_.mean(userPuzzles
+        .filter(([userPuzzle]) => userPuzzle.meta.won && !userPuzzle.meta.mistakes)
         .map(([, user]) => user.score)).toFixed(), 10),
     };
   },
@@ -1239,11 +1239,11 @@ const model = {
       _.flatten(Object.values(globalData.games).map(game => game.userIds)));
     const userIdsWithTournaments = new Set(
       _.flatten(Object.values(globalData.tournaments).map(tournament => tournament.creatorUserId)));
-    const userIdsWithChallenges = new Set(
-      _.flatten(Object.values(globalData.challenges).map(challenge => challenge.userId)));
+    const userIdsWithPuzzles = new Set(
+      _.flatten(Object.values(globalData.puzzles).map(puzzle => puzzle.userId)));
     const usersToRemove = Object.values(globalData.users)
       .filter(user => model.shouldDeleteUser(
-        user, {userIdsWithGames, userIdsWithTournaments, userIdsWithChallenges}));
+        user, {userIdsWithGames, userIdsWithTournaments, userIdsWithPuzzles}));
     if (usersToRemove.length) {
       model.deleteUsers(usersToRemove);
       console.log('removed', usersToRemove.length, 'users with no activity and no password');

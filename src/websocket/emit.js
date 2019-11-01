@@ -12,7 +12,7 @@ const emit = {
     const serializedUser = {
       ..._.pick(user, [
         'id', 'name', 'token', 'online', 'readyToPlay', 'settings', 'score', 'gameCount', 'winCount',
-        'tournamentCount', 'tournamentWinCount', 'challenges', 'challengesStats', 'admin',
+        'tournamentCount', 'tournamentWinCount', 'puzzles', 'puzzlesStats', 'admin',
       ]),
       hasPassword: !!user.passwordHash,
       isUserRatingProvisional: services.isUserRatingProvisional(user),
@@ -25,7 +25,7 @@ const emit = {
     socket.emit("users", Object.values(globalData.users).map(user => ({
       ..._.pick(user, [
         'id', 'name', 'online', 'readyToPlay', 'score', 'gameCount', 'winCount', 'tournamentCount',
-        'tournamentWinCount', 'challengesStats', 'admin',
+        'tournamentWinCount', 'puzzlesStats', 'admin',
       ]),
       isUserRatingProvisional: services.isUserRatingProvisional(user),
     })));
@@ -69,30 +69,30 @@ const emit = {
     })));
   },
 
-  emitChallenges: (socket = io) => {
+  emitPuzzles: (socket = io) => {
     const {persistence: {globalData}} = require("../data");
-    socket.emit("challenges", Object.values(globalData.challenges)
-      .filter(challenge => challenge.meta.public && challenge.meta.publishDatetime.isSameOrBefore())
-      .map(challenge => ({
-        ..._.pick(challenge, ['id', 'userId', 'options', 'meta', 'usersStats']),
-        startingPosition: _.pick(challenge.startingPosition, ['position']),
+    socket.emit("puzzles", Object.values(globalData.puzzles)
+      .filter(puzzle => puzzle.meta.public && puzzle.meta.publishDatetime.isSameOrBefore())
+      .map(puzzle => ({
+        ..._.pick(puzzle, ['id', 'userId', 'options', 'meta', 'usersStats']),
+        startingPosition: _.pick(puzzle.startingPosition, ['position']),
       })));
   },
 
-  emitPersonalChallenges: (userIds = null) => {
+  emitPersonalPuzzles: (userIds = null) => {
     const {persistence: {globalData}} = require("../data");
-    let personalChallenges = Object.values(globalData.challenges);
+    let personalPuzzles = Object.values(globalData.puzzles);
     if (userIds) {
-      personalChallenges = personalChallenges.filter(challenge => userIds.includes(challenge.userId));
+      personalPuzzles = personalPuzzles.filter(puzzle => userIds.includes(puzzle.userId));
     }
-    const personalChallengesByUserId = _.groupBy(personalChallenges, 'userId');
-    for (const [userId, userPersonalChallenges] of Object.entries(personalChallengesByUserId)) {
+    const personalPuzzlesByUserId = _.groupBy(personalPuzzles, 'userId');
+    for (const [userId, userPersonalPuzzles] of Object.entries(personalPuzzlesByUserId)) {
       const user = globalData.users[userId];
       for (const socket of user.sockets) {
-        socket.emit("personal-challenges", userPersonalChallenges
-          .map(challenge => ({
-            ..._.pick(challenge, ['id', 'userId', 'options', 'meta', 'startingPosition', 'usersStats']),
-            isMyChallenge: true,
+        socket.emit("personal-puzzles", userPersonalPuzzles
+          .map(puzzle => ({
+            ..._.pick(puzzle, ['id', 'userId', 'options', 'meta', 'startingPosition', 'usersStats']),
+            isMyPuzzle: true,
           })));
       }
     }
