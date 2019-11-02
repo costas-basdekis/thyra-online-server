@@ -70,7 +70,7 @@ const prepareDataFromLoad = dataFromLoad => {
     }])),
     games: _.fromPairs(dataFromLoad.games.map(game => [game.id, {
       ...game,
-      game: Game.deserialize(game.serializedGame),
+      game: Game.Classic.deserialize(game.serializedGame),
       startDatetime: moment(game.startDatetime),
       endDatetime: game.endDatetime ? moment(game.endDatetime) : null,
       movesDatetimes: game.movesDatetimes.map(datetime => moment(datetime)),

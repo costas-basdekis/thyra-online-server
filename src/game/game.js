@@ -300,22 +300,6 @@ class Game {
       throw new Error("You need to pass rowsAndColumns, status, and previous game");
     }
     this.previous = previous;
-    this.history = (this.previous ? this.previous.history : [])
-      .filter(game => !game.canUndo)
-      .concat([this]);
-    this.previousInHistory = this.history[this.history.length - 2];
-    this.fullHistory = (this.previous ? this.previous.fullHistory : []).concat(this);
-    this.isNextMove = isNextMove;
-    this.moveCount = this.previous ? (isNextMove ? this.previous.moveCount + 1 : this.previous.moveCount) : 1;
-    this.chainCount = this.previous ? this.previous.chainCount + 1 : 0;
-    this.lastMove = lastMove ? lastMove : (status.resignedPlayer ? {resign: status.resignedPlayer} : lastMove);
-    this.moves = this.previous ? this.previous.moves.concat([this.lastMove]) : [];
-    this.lastMovesInHistory = this.fullHistory
-      .slice(this.fullHistory.indexOf(this.previousInHistory) + 1)
-      .map(game => game.lastMove);
-    this.path = this.previousInHistory
-      ? this.previousInHistory.path.concat([this.lastMovesInHistory])
-      : [];
 
     this.rowsAndColumns = rowsAndColumns;
 
@@ -325,27 +309,14 @@ class Game {
     if (missingStatusKeys.length) {
       throw new Error(`Some status keys were missing: ${missingStatusKeys.join(', ')}`);
     }
-    const {nextPlayer, moveType, availableMovesMatrix, canUndo, resignedPlayer} = status;
-    this.thisPlayer = previous ? previous.nextPlayer : Game.PLAYER_A;
-    this.nextPlayer = nextPlayer;
-    this.thisMoveType = previous ? previous.moveType : null;
-    this.moveType = moveType;
-    this.availableMovesMatrix = availableMovesMatrix;
-    this.canUndo = canUndo;
-    this.canTakeMoveBack = !!this.previous;
-    this.resignedPlayer = resignedPlayer;
-    this.moveNotation = resignedPlayer
-      ? this.constructor.MOVE_RESIGNED_NOTATION[resignedPlayer]
-      : (lastMove
-        ? this.constructor.MOVE_NOTATION[lastMove.y][lastMove.x]
-        : '');
-    this.fullNotation = `${this.previous ? this.previous.fullNotation : ''}${this.moveNotation}`;
-    this.compressedFullNotation = this.fullNotation
-      .split(/(..)/)
-      .filter(part => part)
-      .map(part => this.constructor.MOVE_NOTATION_COMPRESSION[part])
-      .join('');
-    this.positionNotation = this.constructor.getPositionNotation(this.rowsAndColumns);
+    this.status = status;
+    this.moveType = this.status.moveType;
+    this.availableMovesMatrix = this.status.availableMovesMatrix;
+    this.resignedPlayer = this.status.resignedPlayer;
+    this.nextPlayer = this.status.nextPlayer;
+    this.canUndo = this.status.canUndo;
+    this.lastMove = lastMove ? lastMove : (this.resignedPlayer ? {resign: this.resignedPlayer} : lastMove);
+    this.isNextMove = isNextMove;
 
     this.winner = this.getWinner();
     if (this.winner) {
@@ -361,6 +332,128 @@ class Game {
       this.availableMovesMatrix = this.constructor.noMovesAreAvailable();
     }
   }
+
+  _getProperty(name, func) {
+    if (!this.hasOwnProperty(name)) {
+      // if (this._getPropertyDependencyCycle.includes(name)) {
+      //   throw new Error(`Dependency cycle detected for properties: ${this._getPropertyDependencyCycle.concat([name]).join(', ')}`);
+      // }
+      // this._getPropertyDependencyCycle.push(name);
+      this[name] = func();
+      // if (this._getPropertyDependencyCycle[this._getPropertyDependencyCycle.length - 1] !== name) {
+      //   throw new Error(`Expected the last property set being '${name}', but it was ${this._getPropertyDependencyCycle.join(', ')}`);
+      // }
+      // this._getPropertyDependencyCycle.pop();
+    }
+
+    return this[name];
+
+  }
+  // _getPropertyDependencyCycle = [];
+
+  get history() {
+    return this._getProperty('_history', () => (this.previous ? this.previous.history : [])
+      .filter(game => !game.canUndo)
+      .concat([this]));
+  }
+
+  get previousInHistory() {
+    return this._getProperty('_previousInHistory', () => this.history[this.history.length - 2]);
+  }
+
+  get fullHistory() {
+    return this._getProperty('_fullHistory', ()=> (this.previous ? this.previous.fullHistory : []).concat(this))
+  };
+  get moveCount() {
+    return this._getProperty('_moveCount', ()=> this.previous ? (this.isNextMove ? this.previous.moveCount + 1 : this.previous.moveCount) : 1)
+  };
+  get chainCount() {
+    return this._getProperty('_chainCount', ()=> this.previous ? this.previous.chainCount + 1 : 0)
+  };
+  get moves() {
+    return this._getProperty('_moves', ()=> this.previous ? this.previous.moves.concat([this.lastMove]) : [])
+  };
+  get lastMovesInHistory() {
+    return this._getProperty('_lastMovesInHistory', ()=> this.fullHistory
+      .slice(this.fullHistory.indexOf(this.previousInHistory) + 1)
+      .map(game => game.lastMove))
+  };
+  get path() {
+    return this._getProperty('_path', ()=> this.previousInHistory
+      ? this.previousInHistory.path.concat([this.lastMovesInHistory])
+      : [])
+  };
+
+  get thisPlayer() {
+    return this._getProperty('_thisPlayer', () => this.previous ? this.previous.nextPlayer : Game.PLAYER_A);
+  }
+  get thisMoveType() {
+    return this._getProperty('_thisMoveType', () => this.previous ? this.previous.moveType : null);
+  }
+  get canTakeMoveBack() {
+    return this._getProperty('_canTakeMoveBack', () => !!this.previous);
+  }
+  get moveNotation() {return this._getProperty('_moveNotation', () => this.resignedPlayer
+    ? this.constructor.MOVE_RESIGNED_NOTATION[this.resignedPlayer]
+    : (this.lastMove
+      ? this.constructor.MOVE_NOTATION[this.lastMove.y][this.lastMove.x]
+      : ''));
+  }
+  get fullNotation() {
+    return this._getProperty('_fullNotation', () => `${this.previous ? this.previous.fullNotation : ''}${this.moveNotation}`);
+  }
+  get compressedFullNotation() {
+    return this._getProperty('_compressedFullNotation', () => this.fullNotation
+      .split(/(..)/)
+      .filter(part => part)
+      .map(part => this.constructor.MOVE_NOTATION_COMPRESSION[part])
+      .join(''));
+  }
+  get positionNotation() {
+    return this._getProperty('_positionNotation', () => this.constructor.getPositionNotation(this.rowsAndColumns));
+  }
+  get startingWorkersPositionGame() {
+    return this._getProperty('_startingWorkersPositionGame', () => {
+      if (this.history.length < 3) {
+        return null;
+      }
+      return this.history[2];
+    });
+  }
+  get startingWorkersPositionNormalisedPositionNotation() {
+    return this._getProperty('_startingWorkersPositionNormalisedPositionNotation', () => {
+      if (!this.startingWorkersPositionGame) {
+        return null;
+      }
+      return this.startingWorkersPositionGame.normalisedPositionNotation;
+    });
+  }
+  get normalisedPositionNotation() {
+    return this._getProperty('_normalisedPositionNotation', () => {
+      const [normalisedPositionNotation] = this.normalisedPositionNotationAndTransformationName;
+      return normalisedPositionNotation;
+    });
+  }
+  get normalisedPositionNotationAndTransformationName() {
+    return this._getProperty('_normalisedPositionNotationAndTransformationName', () => {
+      const normalisedPositionNotation = this.allPositionNotations[0];
+      return [normalisedPositionNotation, (this.transformationNameByPositionNotation)[normalisedPositionNotation]];
+    });
+  }
+  get transformationNameByPositionNotation() {
+    return this._getProperty('_transformationNameByPositionNotation', () => (
+      _.fromPairs(Object.entries(this.constructor.transformationMap)
+      .map(([name, transformation]) => [name, transformation || this.constructor.noTransformation])
+      .map(([name, transformation]) => [Game.Classic.fromRowsAndColumns(transformation(this.rowsAndColumns)).positionNotation, name]))
+    ));
+  }
+
+  get allPositionNotations() {
+    return this._getProperty('_allPositionNotations', () => (
+      Object.keys(this.transformationNameByPositionNotation).sort().reverse()
+    ));
+  }
+
 
   static getAvailableMoves(availableMovesMatrix) {
     return _.flatten(availableMovesMatrix
@@ -458,6 +551,10 @@ class Game {
     return this.constructor.findCells(this.rowsAndColumns, condition);
   }
 
+  static areCellsNeighbours(lhs, rhs) {
+    throw new Error('Not implemented `areCellsNeighbours`');
+  }
+
   static canPlayerWin(rowsAndColumns, player) {
     const playerCells = this.findCells(rowsAndColumns, cell => cell.player === player && cell.level === 2);
     if (!playerCells.length) {
@@ -465,10 +562,7 @@ class Game {
     }
     const playerWinningMoves = this.findCells(rowsAndColumns, cell => (
       cell.level === 3
-      && playerCells.find(playerCell => (
-        Math.abs(cell.x - playerCell.x) <= 1
-        && Math.abs(cell.y - playerCell.y) <= 1
-      ))
+      && playerCells.find(playerCell => this.areCellsNeighbours(cell, playerCell))
     ));
 
     return playerWinningMoves.length > 0;
@@ -517,8 +611,7 @@ class Game {
     const fromCell = rowsAndColumns[coordinates.y].cells[coordinates.x];
     const maximumLevel = fromCell.level + 1;
     return this.getAvailableMovesMatrix(rowsAndColumns, cell => (
-      Math.abs(cell.x - coordinates.x) <= 1
-      && Math.abs(cell.y - coordinates.y) <= 1
+      this.areCellsNeighbours(cell, coordinates)
       && !cell.player
       && cell.level <= 3
       && cell.level <= maximumLevel
@@ -532,8 +625,7 @@ class Game {
   static getBuildableAvailableMovesMatrix(rowsAndColumns, coordinates) {
     const fromCell = rowsAndColumns[coordinates.y].cells[coordinates.x];
     return this.getAvailableMovesMatrix(rowsAndColumns, cell => (
-      Math.abs(cell.x - coordinates.x) <= 1
-      && Math.abs(cell.y - coordinates.y) <= 1
+      this.areCellsNeighbours(cell, coordinates)
       && !cell.player
       && cell.level < 4
       && (!this.canPlayerWin(this.updateCells(rowsAndColumns, ...[
@@ -558,7 +650,7 @@ class Game {
       this.checkCoordinatesAreValid(targetCoordinates);
     }
     if (!this.availableMovesMatrix[coordinates.y][coordinates.x]) {
-      throw new Error(`Move ${JSON.stringify(coordinates)} is not one of the available ones`);
+      throw new InvalidMoveError(`Move ${JSON.stringify(coordinates)} is not one of the available ones`);
     }
   }
 
@@ -728,7 +820,336 @@ class Game {
       resignedPlayer: null,
     }, {x, y});
   }
+
+  getAvailableMoves() {
+    if (this.finished) {
+      return [];
+    }
+
+    return _.flatten(this.availableMovesMatrix
+      .map((xs, y) => xs
+        .map((available, x) => [x, y, available])
+        .filter(([, , available]) => available)
+        .map(([x,y])=>({x,y}))));
+  }
+
+  getNextGames() {
+    return this.getAvailableMoves().map(move => this.makeMove(move));
+  }
+
+  getNextFullMoveGames(nextPlayer = this.nextPlayer) {
+    if (this.nextPlayer !== nextPlayer) {
+      return [this];
+    }
+
+    return _.flatten(this.getNextGames().map(game => game.getNextFullMoveGames(nextPlayer)));
+  }
+
+  getSearchState(maxDepth, previous = null) {
+    const result = this.finished ? (this.winner === this.nextPlayer ? 'won' : 'lost') : null;
+    return {
+      game: this,
+      result: result,
+      nextGamesLeft: this.getNextFullMoveGames(),
+      results: {
+        won: result === 'won',
+        lost: result === 'lost',
+        undetermined: false,
+      },
+      ...(!previous || previous.loseLeaves ? {
+        winLeaves: result ==='won' ? [this] : [],
+      } : {
+        loseLeaves: result === 'lost' ? [this] : [],
+      }),
+      previous,
+      moves: null,
+      maxDepth,
+    };
+  }
+
+  static advanceSearchState(state) {
+    if (state.result !== null) {
+      console.log('got result', state.result, 'with', state.maxDepth, 'depth');
+      if (state.previous) {
+        if (state.result === 'won') {
+          state.previous.results.lost = true;
+          if (state.winLeaves) {
+            state.previous.loseLeaves.push(...state.winLeaves);
+          }
+        } else if (state.result === 'lost') {
+          state.previous.results.won = true;
+          // state.previous.result = 'won';
+          if (state.loseLeaves) {
+            state.previous.winLeaves.push(...state.loseLeaves);
+          }
+        } else {
+          throw new Error(`Unknown result '${state.result}'`);
+        }
+        return state.previous;
+      } else {
+        return state;
+      }
+    }
+    if (state.maxDepth <= 0) {
+      // console.log('undetermined');
+      state.results.undetermined = true;
+      if (state.previous) {
+        state.previous.results.undetermined = true;
+        return state.previous;
+      } else {
+        console.log('finished');
+        return state;
+      }
+    }
+    if (!state.nextGamesLeft.length) {
+      if (state.results.won) {
+        state.result = 'won';
+        return state;
+      } else if (state.results.undetermined) {
+        if (state.previous) {
+          state.previous.results.undetermined = true;
+          return state.previous;
+        } else {
+          console.log('finished');
+          return state;
+        }
+      } else if (state.results.lost) {
+        state.result = 'lost';
+        return state;
+      }
+      console.log(state);
+      throw new Error('Result is null, there are no next games, and there are no results');
+    }
+    const nextGame = state.nextGamesLeft.shift();
+    return nextGame.getSearchState(state.maxDepth - 1, state);
+  }
+
+  static advanceSearchStateSteps(state, steps = 20) {
+    let rootState = state;
+    while (rootState.previous) {
+      rootState = rootState.previous;
+    }
+    for (let i = 0 ; i < steps ; i++) {
+      if (rootState.result !== null ) {
+        break;
+      }
+      state = this.advanceSearchState(state);
+    }
+
+    return state;
+  }
 }
+
+class GameClassic extends Game {
+  static areCellsNeighbours(lhs, rhs) {
+    return (
+      Math.abs(lhs.x - rhs.x) <= 1
+      && Math.abs(lhs.y - rhs.y) <= 1
+    );
+  }
+
+  static transformationMaxRotations = 4;
+
+  // noinspection JSSuspiciousNameCombination
+  static transformationMap = {
+    '0,false': null,
+    '1,false': this.makeTransformRowsAndColumns({transpose: true, flipX: false, flipY: true}),
+    '2,false': this.makeTransformRowsAndColumns({transpose: false, flipX: true, flipY: true}),
+    '3,false': this.makeTransformRowsAndColumns({transpose: true, flipX: true, flipY: false}),
+    '0,true': this.makeTransformRowsAndColumns({transpose: false, flipX: true, flipY: false}),
+    '1,true': this.makeTransformRowsAndColumns({transpose: true, flipX: true, flipY: true}),
+    '2,true': this.makeTransformRowsAndColumns({transpose: false, flipX: false, flipY: true}),
+    '3,true': this.makeTransformRowsAndColumns({transpose: true, flipX: false, flipY: false}),
+  };
+  static noTransformation = this.makeTransformRowsAndColumns({transpose:  false, flipX: false, flipY: false});
+
+  static makeTransformRowsAndColumns(config) {
+    const transformRowsAndColumns = rowsAndColumns => {
+      return this.transformRowsAndColumns(rowsAndColumns, config);
+    };
+    transformRowsAndColumns.coordinates = (rowsAndColumns, coordinates) => {
+      return this.reverseTransformCoordinates(rowsAndColumns, coordinates, config);
+    };
+    // We can tell if the board is flipped (horizontally or vertically)
+    const flipped = config.transpose ^ config.flipX ^ config.flipY;
+    const reverseConfig = config.transpose && !flipped ? {
+      transpose: config.transpose,
+      flipX: !config.flipX,
+      flipY: !config.flipY,
+    } : config;
+    transformRowsAndColumns.reverseCoordinates = (rowsAndColumns, coordinates) => {
+      return this.reverseTransformCoordinates(rowsAndColumns, coordinates, reverseConfig);
+    };
+
+    return transformRowsAndColumns;
+  }
+
+  static transformRowsAndColumns(rowsAndColumns, config) {
+    let {newRowCount, newColumnCount} = this.getTransformationNewRowAndColumnCount(rowsAndColumns, config);
+    const newXs = _.range(newColumnCount);
+    const newYs = _.range(newRowCount);
+
+    return newYs.map(newY => ({
+      y: newY,
+      cells: newXs.map(newX => {
+        let {oldX, oldY} = this.getTransformationOldCoordinates( {newX, newY}, {newRowCount, newColumnCount}, config);
+        return {
+        ...rowsAndColumns[oldY].cells[oldX],
+          x: newX, y: newY,
+        };
+      }),
+    }));
+  }
+
+  static reverseTransformCoordinates(rowsAndColumns, coordinates, config) {
+    let {newRowCount, newColumnCount} = this.getTransformationNewRowAndColumnCount(rowsAndColumns, config);
+    const {x: newX, y: newY} = coordinates;
+    const {oldX, oldY} = this.getTransformationOldCoordinates( {newX, newY}, {newRowCount, newColumnCount}, config);
+
+    return {x: oldX, y: oldY};
+  }
+
+  static getTransformationNewRowAndColumnCount(rowsAndColumns, config) {
+    const rowCount = rowsAndColumns.length;
+    const columnCount = Math.max(...rowsAndColumns.map(row => row.cells.length)) || 0;
+    const {transpose} = config;
+    let newRowCount, newColumnCount;
+    if (transpose) {
+      [newColumnCount, newRowCount] = [rowCount, columnCount];
+    } else {
+      [newColumnCount, newRowCount] = [columnCount, rowCount];
+    }
+    return {newRowCount, newColumnCount};
+  }
+
+  static getTransformationOldCoordinates({newX, newY}, {newColumnCount, newRowCount}, config) {
+    const {transpose, flipX, flipY} = config;
+    let oldX, oldY;
+    if (transpose) {
+      [oldX, oldY] = [newY, newX];
+    } else {
+      [oldX, oldY] = [newX, newY];
+    }
+    if (flipX) {
+      oldX = newColumnCount - 1 - oldX;
+    }
+    if (flipY) {
+      oldY = newRowCount - 1 - oldY;
+    }
+    return {oldX, oldY};
+  }
+
+  getSucceedingEquivalentPositionNotationAndMoves(nextGame) {
+    const allPositionNotations = nextGame.allPositionNotations;
+    for (const position of allPositionNotations) {
+      const game = this.constructor.fromCompressedPositionNotation(position);
+      const {moves} = this.inferMoves(game);
+      if (moves) {
+        return {position, moves};
+      }
+    }
+    return {position: null, moves: null};
+  }
+
+  inferMoves(nextGame) {
+    const previousRowsAndColumns = this.rowsAndColumns;
+    const rowsAndColumns = nextGame.rowsAndColumns;
+    let fromCoordinates = null, toCoordinates = null, isPlaceWorkersMove = false;
+    let buildCoordinates = null, canBeMissingBuildMove = true;
+    for (const y of this.constructor.ROWS) {
+      for (const x of this.constructor.COLUMNS) {
+        const previousCell = previousRowsAndColumns[y].cells[x];
+        const cell = rowsAndColumns[y].cells[x];
+
+        if (previousCell.player !== cell.player) {
+          if (previousCell.player && cell.player) {
+            return {moves: null, error: ['Both cells had different players', previousCell, cell]};
+          } else if (previousCell.player) {
+            if (fromCoordinates) {
+              return {moves: null, error: ['There was a from coordinates', previousCell, fromCoordinates]};
+            }
+            fromCoordinates = {x, y};
+          } else if (cell.player) {
+            if (toCoordinates) {
+              if (canBeMissingBuildMove) {
+                if (isPlaceWorkersMove) {
+                  return {moves: null, error: ['Trying to place too many workers', cell, fromCoordinates, toCoordinates]};
+                }
+                isPlaceWorkersMove = true;
+                fromCoordinates = toCoordinates;
+              } else {
+                return {moves: null, error: ['There was a to coordinates', cell, toCoordinates]};
+              }
+            }
+            toCoordinates = {x, y};
+          } else {
+            return {moves: null, error: ['Both cells had different false players', previousCell, cell]};
+          }
+        }
+
+        if (previousCell.level > 0 || cell.level > 0) {
+          if (isPlaceWorkersMove) {
+            return {moves: null, error: ['There are levels, while placing initial workers', previousCell, cell, fromCoordinates, toCoordinates]};
+          }
+          canBeMissingBuildMove = false;
+        }
+        if (previousCell.level !== cell.level) {
+          if (buildCoordinates) {
+            return {moves: null, error: ['There was a build coordinates', previousCell, cell, buildCoordinates]};
+          }
+          if (previousCell.level !== (cell.level - 1)) {
+            return {moves: null, error: ['The build was too high or too low', previousCell, cell]};
+          }
+          buildCoordinates = {x, y};
+        }
+      }
+    }
+    if (!fromCoordinates || !toCoordinates) {
+      return {moves: null, error: ['There was either no from or no to coordinates', fromCoordinates, toCoordinates]};
+    }
+    if (!canBeMissingBuildMove && !buildCoordinates) {
+      return {moves: null, error: ['It couldn\'t be missing build move but it did', canBeMissingBuildMove, buildCoordinates]};
+    }
+    let moves;
+    if (canBeMissingBuildMove) {
+      moves = [fromCoordinates, toCoordinates];
+    } else {
+      moves = [fromCoordinates, toCoordinates, buildCoordinates];
+    }
+    try {
+      this.makeMoves(moves);
+    } catch (e) {
+      if (e instanceof InvalidMoveError) {
+        return {moves: null, error: ['The moves were invalid', moves]};
+      }
+      throw e;
+    }
+    return {moves, error: null};
+  }
+}
+Game.Classic = GameClassic;
+
+class GameHex extends Game {
+  static areCellsNeighbours(lhs, rhs) {
+    if (!(
+      Math.abs(lhs.x - rhs.x) <= 1
+      && Math.abs(lhs.y - rhs.y) <= 1
+    )) {
+      return false;
+    }
+
+    if (lhs.x === rhs.x) {
+      return true;
+    } else if (lhs.x % 2 === 0) {
+      return rhs.y >= lhs.y;
+    } else {
+      return rhs.y <= lhs.y;
+    }
+  }
+}
+Game.Hex = GameHex;
+
+Game.GAME_TYPES = [Game.Classic, Game.Hex];
 
 module.exports = {
   Game,

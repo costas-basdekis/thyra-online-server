@@ -63,7 +63,7 @@ addMigration({
   description: "Use more compact game representation",
   migrate: data => {
     for (const game of Object.values(data.games)) {
-      game.serializedGame = Game.deserialize(game.serializedGame).serialize();
+      game.serializedGame = Game.Classic.deserialize(game.serializedGame).serialize();
     }
   },
 });
@@ -101,7 +101,7 @@ addMigration({
   description: "Export `game.nextUserId`",
   migrate: data => {
     for (const game of data.games) {
-      const gameGame = Game.deserialize(game.serializedGame);
+      const gameGame = Game.Classic.deserialize(game.serializedGame);
       game.nextUserId = gameGame.nextPlayer === Game.PLAYER_A ? game.userIds[0] : gameGame.nextPlayer === Game.PLAYER_B ? game.userIds[1] : null;
     }
   },
@@ -111,7 +111,7 @@ addMigration({
   description: "Add game dates",
   migrate: data => {
     for (const game of data.games) {
-      const gameGame = Game.deserialize(game.serializedGame);
+      const gameGame = Game.Classic.deserialize(game.serializedGame);
       let lastDatetime = moment('2019-08-13T12:00:00.000Z');
       game.startDatetime = lastDatetime;
       game.movesDatetimes = gameGame.moves.map(() => {
@@ -441,7 +441,7 @@ addMigration({
       game.serializedGame.useCheck = true;
       let gameGame;
       try {
-        gameGame = Game.deserialize(game.serializedGame);
+        gameGame = Game.Classic.deserialize(game.serializedGame);
         continue;
       } catch (e) {
       }
@@ -449,7 +449,7 @@ addMigration({
       while (moves.length) {
         moves = moves.slice(0, moves.length - 1);
         try {
-          gameGame = Game.deserialize({...game.serializedGame, moves});
+          gameGame = Game.Classic.deserialize({...game.serializedGame, moves});
           if (Game.MOVE_TYPES_START_OF_TURN.includes(gameGame.moveType)) {
             break;
           }
@@ -459,7 +459,7 @@ addMigration({
       console.log('Game', game.id, 'had', game.serializedGame.moves.length - moves.length, 'moves removed');
       if (!gameGame.finished) {
         moves = moves.concat([{resign: gameGame.nextPlayer}]);
-        gameGame = Game.deserialize({...game.serializedGame, moves});
+        gameGame = Game.Classic.deserialize({...game.serializedGame, moves});
         console.log('Game', game.id, 'had player resigned instead of making illegal move');
       }
       const winner = gameGame.winner;

@@ -310,7 +310,7 @@ const model = {
     while (id in globalData.games) {
       id = uuid4();
     }
-    const gameGame = Game.create();
+    const gameGame = Game.Classic.create();
     let players = [otherUser, user];
     if (!tournamentId) {
       players = model.getGamePlayersStartingOrder(players);
@@ -1007,13 +1007,13 @@ const model = {
     const validatePositions = [[puzzle.startingPosition, null, 'playerResponses']];
     while (validatePositions.length) {
       const [position, previousGame, positionType] = validatePositions.shift();
-      if (!Game.isValidCompressedPositionNotation(position.position)) {
+      if (!Game.Classic.isValidCompressedPositionNotation(position.position)) {
         console.log('invalid puzzle: position has not valid `position`');
         return null;
       }
       let game;
       if (!previousGame) {
-        game = Game.fromCompressedPositionNotation(position.position);
+        game = Game.Classic.fromCompressedPositionNotation(position.position);
       } else {
         try {
           game = previousGame.makeMoves(position.moves);
@@ -1103,7 +1103,7 @@ const model = {
     };
     let userPuzzleStep = userPuzzle.startingPosition;
     let puzzleStep = puzzle.startingPosition;
-    let game = Game.fromCompressedPositionNotation(puzzleStep.position);
+    let game = Game.Classic.fromCompressedPositionNotation(puzzleStep.position);
     for (const moves of path) {
       let nextGame;
       try {
