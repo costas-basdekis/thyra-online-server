@@ -94,6 +94,7 @@ const model = {
     emit.emitUser(user);
     emit.emitUsers();
     emit.emitGames(socket);
+    emit.emitOpeningDatabase(socket);
 
     return [user, created];
   },
@@ -473,6 +474,68 @@ const model = {
       && game.move < 5
       && !Object.values(globalData.puzzles).find(puzzle => puzzle.meta.gameId === game.id)
     );
+  },
+
+  rebuildOpeningDatabase: () => {
+    const oldDatabaseGameCount = globalData.openingDatabase.gameIds.length;
+    const games = Object.values(globalData.games).filter(game => game.finished);
+    const newDatabaseGameCount = games.length;
+    if (newDatabaseGameCount === oldDatabaseGameCount) {
+      console.log('No new games to rebuild opening database:', oldDatabaseGameCount, 'games');
+      return;
+    }
+    const getNext = (gamesAndHistoriesByPosition, {displayGame}) => {
+      return _.orderBy(Object.entries(gamesAndHistoriesByPosition).map(([position, gamesAndHistories]) => {
+        const nextGamesAndHistoriesByPosition = gamesAndHistories.length > 1 ? _.mapValues(_.groupBy(
+          gamesAndHistories.filter(({history}) => history.length > 1),
+          ({history}) => history[1].normalisedPositionNotation,
+        ), gamesAndHistories => gamesAndHistories.map(({game, history}) => ({
+          game,
+          history: history.slice(1),
+        }))) : null;
+        const game = Game.Classic.fromCompressedPositionNotation(position);
+        let displayPosition = position, moves = null, nextDisplayGame = game;
+        if (displayGame) {
+          ({position: displayPosition, moves} = displayGame.getSucceedingEquivalentPositionNotationAndMoves(game));
+          if (!displayPosition) {
+            throw new Error(
+              `Could not find next position and moves from ${displayGame.positionNotation} to ${game.positionNotation}`);
+          }
+          nextDisplayGame = Game.Classic.fromCompressedPositionNotation(displayPosition);
+        }
+        return {
+          position,
+          displayPosition,
+          moves,
+          gameIds: gamesAndHistories.map(({game}) => game.id),
+          winCount: _.merge(
+            {[Game.PLAYER_A]: 0, [Game.PLAYER_B]: 0},
+            _.mapValues(_.groupBy(gamesAndHistories, ({game}) => game.winner), games => games.length),
+          ),
+          next: gamesAndHistories.length > 1
+            ? getNext(nextGamesAndHistoriesByPosition, {displayGame: nextDisplayGame})
+            : [],
+        };
+      }), [({gameIds}) => gameIds.length, ({position}) => position], ['desc', 'asc']);
+    };
+    const firstStep = getNext({
+      [Game.Classic.create().positionNotation]: games.map(game => ({
+        game,
+        history: Game.Classic.deserialize(game.serializedGame).history,
+      })),
+    }, {displayGame: null})[0];
+    globalData.openingDatabase = {
+      position: null,
+      displayPosition: null,
+      moves: null,
+      gameIds: firstStep.gameIds,
+      winCount: firstStep.winCount,
+      next: [firstStep],
+    };
+    console.log('Rebuild opening database: from', oldDatabaseGameCount, 'games to', newDatabaseGameCount);
+    saveData();
+    const {emit} = require("../websocket");
+    emit.emitOpeningDatabase();
   },
 
   createTournament: (creator, {name, gameCount}) => {

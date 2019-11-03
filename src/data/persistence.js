@@ -55,6 +55,7 @@ const prepareDataForSave = data => {
         publishDatetime: puzzle.meta.publishDatetime ? puzzle.meta.publishDatetime.toISOString() : null,
       },
     })),
+    openingDatabase: data.openingDatabase,
   };
 };
 
@@ -89,6 +90,7 @@ const prepareDataFromLoad = dataFromLoad => {
         publishDatetime: puzzle.meta.publishDatetime ? moment(puzzle.meta.publishDatetime) : null,
       },
     }])),
+    openingDatabase: dataFromLoad.openingDatabase,
   };
 };
 

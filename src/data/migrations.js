@@ -645,3 +645,17 @@ addMigration({
     }
   },
 });
+
+addMigration({
+  description: "Add opening database",
+  migrate: data => {
+    data.openingDatabase = {
+      position: null,
+      displayPosition: null,
+      moves: null,
+      gameIds: [],
+      winCount: {[Game.PLAYER_A]: 0, [Game.PLAYER_B]: 0},
+      next: [],
+    };
+  },
+});

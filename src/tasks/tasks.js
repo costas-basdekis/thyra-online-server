@@ -17,3 +17,12 @@ addTask({
     model.resignOldGames();
   },
 });
+
+addTask({
+  name: 'rebuildOpeningDatabase',
+  interval: every.hour,
+  run: () => {
+    const {model} = require('../data');
+    model.rebuildOpeningDatabase();
+  },
+});

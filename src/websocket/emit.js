@@ -45,6 +45,11 @@ const emit = {
     socket.emit("deleted-game", game.id);
   },
 
+  emitOpeningDatabase: (socket = io) => {
+    const {persistence: {globalData}} = require("../data");
+    socket.emit("opening-database", globalData.openingDatabase);
+  },
+
   serializeGameForEmit: game => {
     return {
       ..._.pick(game, [
