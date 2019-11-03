@@ -1,3 +1,4 @@
+const util = require('util');
 const moment = require('moment');
 
 const tasks = [];
@@ -23,8 +24,11 @@ const addTask = task => {
 
 const runAllTasks = () => {
   for (const task of tasks) {
-    console.log('Running task', task.name, 'on', moment().toISOString());
+    process.stdout.write(util.formatWithOptions({colors: true}, 'Running task', task.name, 'on', moment().toISOString(), '... '));
+    const start = process.hrtime();
     task.run();
+    const [seconds, nanoseconds] = process.hrtime(start);
+    console.log('in', (seconds + nanoseconds / 1e9).toFixed(1), 'seconds');
   }
 };
 

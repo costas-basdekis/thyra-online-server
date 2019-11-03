@@ -1,3 +1,4 @@
+const util = require("util");
 const {Game} = require('../game/game');
 const _ = require('lodash');
 const moment = require('moment');
@@ -41,8 +42,11 @@ const migrate = module.exports.migrate = (data) => {
   console.log('checking for migrations from version', data.version);
   for (const migration of migrations) {
     if (migration.fromVersion === data.version) {
-      console.log('migrating', {from: data.version, to: migration.toVersion, description: migration.description});
+      process.stdout.write(util.formatWithOptions({colors: true}, 'migrating', {from: data.version, to: migration.toVersion, description: migration.description}, '... '));
+      const start = process.hrtime();
       migration.migrate(data);
+      const [seconds, nanoseconds] = process.hrtime(start);
+      console.log('in', (seconds + nanoseconds / 1e9).toFixed(1), 'seconds');
       data.version = migration.toVersion;
       migrated = true;
     }
