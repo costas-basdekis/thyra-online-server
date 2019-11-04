@@ -19,10 +19,10 @@ addTask({
 });
 
 addTask({
-  name: 'rebuildOpeningDatabase',
+  name: 'rebuildOpeningsDatabase',
   interval: every.hour,
   run: () => {
     const {model} = require('../data');
-    model.rebuildOpeningDatabase();
+    model.rebuildOpeningsDatabase();
   },
 });

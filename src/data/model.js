@@ -94,7 +94,7 @@ const model = {
     emit.emitUser(user);
     emit.emitUsers();
     emit.emitGames(socket);
-    emit.emitOpeningDatabase(socket);
+    emit.emitOpeningsDatabase(socket);
 
     return [user, created];
   },
@@ -476,12 +476,12 @@ const model = {
     );
   },
 
-  rebuildOpeningDatabase: () => {
-    const oldDatabaseGameCount = globalData.openingDatabase.gameIds.length;
+  rebuildOpeningsDatabase: () => {
+    const oldDatabaseGameCount = globalData.openingsDatabase.gameIds.length;
     const games = Object.values(globalData.games).filter(game => game.finished);
     const newDatabaseGameCount = games.length;
     if (newDatabaseGameCount === oldDatabaseGameCount) {
-      console.log('No new games to rebuild opening database:', oldDatabaseGameCount, 'games');
+      console.log('No new games to rebuild openings database:', oldDatabaseGameCount, 'games');
       return;
     }
     const getNext = (gamesAndHistoriesByPosition, {displayGame}) => {
@@ -524,7 +524,7 @@ const model = {
         history: Game.Classic.deserialize(game.serializedGame).history,
       })),
     }, {displayGame: null})[0];
-    globalData.openingDatabase = {
+    globalData.openingsDatabase = {
       position: null,
       displayPosition: null,
       moves: null,
@@ -532,10 +532,10 @@ const model = {
       winCount: firstStep.winCount,
       next: [firstStep],
     };
-    console.log('Rebuild opening database: from', oldDatabaseGameCount, 'games to', newDatabaseGameCount);
+    console.log('Rebuild openings database: from', oldDatabaseGameCount, 'games to', newDatabaseGameCount);
     saveData();
     const {emit} = require("../websocket");
-    emit.emitOpeningDatabase();
+    emit.emitOpeningsDatabase();
   },
 
   createTournament: (creator, {name, gameCount}) => {

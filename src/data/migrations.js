@@ -659,3 +659,11 @@ addMigration({
     };
   },
 });
+
+addMigration({
+  description: "Rename openings database",
+  migrate: data => {
+    data.openingsDatabase = data.openingDatabase;
+    delete data.openingDatabase;
+  },
+});
