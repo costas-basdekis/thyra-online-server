@@ -484,7 +484,7 @@ const model = {
       console.log('No new games to rebuild openings database:', oldDatabaseGameCount, 'games');
       return;
     }
-    const getNext = (gamesAndHistoriesByPosition, {displayGame}) => {
+    const getNext = (gamesAndHistoriesByPosition, {displayGame, previousMoves}) => {
       return _.orderBy(Object.entries(gamesAndHistoriesByPosition).map(([position, gamesAndHistories]) => {
         const nextGamesAndHistoriesByPosition = gamesAndHistories.length > 1 ? _.mapValues(_.groupBy(
           gamesAndHistories.filter(({history}) => history.length > 1),
@@ -503,17 +503,19 @@ const model = {
           }
           nextDisplayGame = Game.Classic.fromCompressedPositionNotation(displayPosition);
         }
+        const allMoves = moves ? previousMoves.concat(moves) : previousMoves;
         return {
           position,
           displayPosition,
           moves,
+          allMoves: allMoves,
           gameIds: gamesAndHistories.map(({game}) => game.id),
           winCount: _.merge(
             {[Game.PLAYER_A]: 0, [Game.PLAYER_B]: 0},
             _.mapValues(_.groupBy(gamesAndHistories, ({game}) => game.winner), games => games.length),
           ),
           next: gamesAndHistories.length > 1
-            ? getNext(nextGamesAndHistoriesByPosition, {displayGame: nextDisplayGame})
+            ? getNext(nextGamesAndHistoriesByPosition, {displayGame: nextDisplayGame, previousMoves: allMoves})
             : [],
         };
       }), [({gameIds}) => gameIds.length, ({position}) => position], ['desc', 'asc']);
@@ -523,11 +525,12 @@ const model = {
         game,
         history: Game.Classic.deserialize(game.serializedGame).history,
       })),
-    }, {displayGame: null})[0];
+    }, {displayGame: null, previousMoves: []})[0];
     globalData.openingsDatabase = {
       position: null,
       displayPosition: null,
       moves: null,
+      allMoves: [],
       gameIds: firstStep.gameIds,
       winCount: firstStep.winCount,
       next: [firstStep],
