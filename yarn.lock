@@ -83,6 +83,10 @@ better-assert@~1.0.0:
   dependencies:
     callsite "1.0.0"
 
+bindings@~1.2.1:
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/bindings/-/bindings-1.2.1.tgz#14ad6113812d2d37d72e67b4cacb4bb726505f11"
+
 blob@0.0.5:
   version "0.0.5"
   resolved "https://registry.yarnpkg.com/blob/-/blob-0.0.5.tgz#d680eeef25f8cd91ad533f5b01eed48e64caf683"
@@ -188,6 +192,19 @@ cookie@0.4.0:
 core-util-is@~1.0.0:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/core-util-is/-/core-util-is-1.0.2.tgz#b5fd54220aa2bc5ab57aab7140c940754503c1a7"
+
+deasync-promise@1.0.1:
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/deasync-promise/-/deasync-promise-1.0.1.tgz#2b27de478167af4ef34ba99879c52ec0cedd61c2"
+  dependencies:
+    deasync "^0.1.7"
+
+deasync@^0.1.7:
+  version "0.1.15"
+  resolved "https://registry.yarnpkg.com/deasync/-/deasync-0.1.15.tgz#788c4bbe6d32521233b28d23936de1bbadd2e112"
+  dependencies:
+    bindings "~1.2.1"
+    node-addon-api "^1.6.0"
 
 debug@2.6.9:
   version "2.6.9"
@@ -569,6 +586,10 @@ negotiator@0.6.2:
   version "0.6.2"
   resolved "https://registry.yarnpkg.com/negotiator/-/negotiator-0.6.2.tgz#feacf7ccf525a77ae9634436a64883ffeca346fb"
 
+node-addon-api@^1.6.0:
+  version "1.7.1"
+  resolved "https://registry.yarnpkg.com/node-addon-api/-/node-addon-api-1.7.1.tgz#cf813cd69bb8d9100f6bdca6755fc268f54ac492"
+
 node-pre-gyp@0.12.0:
   version "0.12.0"
   resolved "https://registry.yarnpkg.com/node-pre-gyp/-/node-pre-gyp-0.12.0.tgz#39ba4bb1439da030295f899e3b520b7785766149"
@@ -876,6 +897,12 @@ supports-color@^5.3.0:
   resolved "https://registry.yarnpkg.com/supports-color/-/supports-color-5.5.0.tgz#e2e69a44ac8772f78a1ec0b35b689df6530efc8f"
   dependencies:
     has-flag "^3.0.0"
+
+system-sleep@^1.3.6:
+  version "1.3.6"
+  resolved "https://registry.yarnpkg.com/system-sleep/-/system-sleep-1.3.6.tgz#ed9b698ae991f3e6cee85aa0083c9a06a9b6bc03"
+  dependencies:
+    deasync-promise "1.0.1"
 
 tar@^4:
   version "4.4.10"
