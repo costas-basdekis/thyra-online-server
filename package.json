@@ -4,8 +4,7 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "start": "node --inspect index.js",
-    "debug": "node --inspect debugIndex.js"
+    "start": "node --inspect index.js"
   },
   "dependencies": {
     "bcrypt": "^3.0.6",

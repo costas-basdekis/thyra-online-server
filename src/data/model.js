@@ -1288,7 +1288,7 @@ const model = {
         return false;
       }
       const lastDatetime = game.movesDatetimes[game.movesDatetimes.length - 1] || game.startDatetime;
-      const abortDatetime = lastDatetime.add(1, 'day');
+      const abortDatetime = lastDatetime.clone().add(1, 'day');
       if (abortDatetime.isAfter(now)) {
         return false;
       }
@@ -1335,7 +1335,7 @@ const model = {
       return null;
     }
     const lastDatetime = game.movesDatetimes[game.movesDatetimes.length - 1] || game.startDatetime;
-    const resignDatetime = lastDatetime.add(1, 'day');
+    const resignDatetime = lastDatetime.clone().add(1, 'day');
     return resignDatetime;
   },
 
