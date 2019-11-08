@@ -667,3 +667,27 @@ addMigration({
     delete data.openingDatabase;
   },
 });
+
+addMigration({
+  description: "Fix datetimes issues",
+  migrate: data => {
+    for (const game of data.games) {
+      game.startDatetime = moment(game.startDatetime);
+      game.movesDatetimes = game.movesDatetimes.map(datetime => moment(datetime));
+      game.endDatetime = game.endDatetime ? moment(game.endDatetime) : null;
+
+      const datetimes = [game.startDatetime, ...game.movesDatetimes, game.endDatetime].filter(datetime => datetime);
+      for (let i = datetimes.length - 1 ; i > 0 ; i--) {
+        const datetime = datetimes[i];
+        const previous = datetimes[i - 1];
+        while (previous.isAfter(datetime)) {
+          previous.subtract(1, 'days');
+        }
+      }
+
+      game.startDatetime = game.startDatetime.toISOString();
+      game.movesDatetimes = game.movesDatetimes.map(datetime => datetime.toISOString());
+      game.endDatetime = game.endDatetime ? game.endDatetime.toISOString() : null;
+    }
+  },
+});
