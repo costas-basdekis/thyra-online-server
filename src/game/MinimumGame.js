@@ -179,7 +179,10 @@ class MinimumGame {
   }
 
   get fullMoves() {
-    return this.moves.map(index => this.constructor.indexToPosition[index ]);
+    if (!this.moves) {
+      return null;
+    }
+    return this.moves.map(index => this.constructor.indexToPosition[index]);
   }
 
   get historyFullMoves() {
