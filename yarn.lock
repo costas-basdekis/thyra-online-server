@@ -234,6 +234,10 @@ deep-extend@^0.6.0:
   version "0.6.0"
   resolved "https://registry.yarnpkg.com/deep-extend/-/deep-extend-0.6.0.tgz#c4fa7c95404a17a9c3e8ca7e1537312b736330ac"
 
+deepool@^2.2.0:
+  version "2.2.0"
+  resolved "https://registry.yarnpkg.com/deepool/-/deepool-2.2.0.tgz#d8c4be7a1da7b8cb27b54c2f4e7cfadcc363ae05"
+
 delegates@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/delegates/-/delegates-1.0.0.tgz#84c6e159b81904fdca59a0ef44cd870d31250f9a"

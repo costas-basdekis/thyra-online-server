@@ -1152,6 +1152,7 @@ Game.Hex = GameHex;
 Game.GAME_TYPES = [Game.Classic, Game.Hex];
 
 module.exports = {
+  default: Game,
   Game,
   InvalidMoveError,
 };
