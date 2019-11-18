@@ -231,20 +231,30 @@ class MinimumGame {
         }
         this._nextMoves = nextMoves;
       } else {
-        const {neighboursBitmap} = this.constructor;
         const {levels, nextPlayerIndexes, otherPlayerIndexes} = this;
-        const otherPlayerLevel2Indexes = otherPlayerIndexes
-          .filter(workerIndex => levels[workerIndex] === 2);
-        const otherPlayerLevel2NeighbourBitmap = otherPlayerLevel2Indexes
-          .map(workerIndex => neighboursBitmap[workerIndex])
-          .reduce((total, current) => total | current, noneBitmap) | noneBitmap;
-        const otherPlayerLevel2NeighbourIndexes = this.constructor.bitmapToIndexes(otherPlayerLevel2NeighbourBitmap);
-        const mustBlockIndexes = otherPlayerLevel2NeighbourIndexes
-          .filter(index => levels[index] === 3);
-        if (mustBlockIndexes.length > 1) {
+        const {neighboursIndexes, neighboursBitmap} = this.constructor;
+        let mustBlockIndex = null, cannotBuildBitmap = noneBitmap, lost = false;
+        onLost: for (const workerIndex of otherPlayerIndexes) {
+          if (levels[workerIndex] !== 2) {
+            continue;
+          }
+          for (const neighbour of neighboursIndexes[workerIndex]) {
+            if (levels[neighbour] !== 3) {
+              if (levels[neighbour] === 2) {
+                cannotBuildBitmap |= 1 << neighbour;
+              }
+              continue;
+            }
+            if (mustBlockIndex !== null && mustBlockIndex !== neighbour) {
+              lost = true;
+              break onLost;
+            }
+            mustBlockIndex = neighbour;
+          }
+        }
+        if (lost) {
           this._nextMoves = [];
         } else {
-          const mustBlockIndex = mustBlockIndexes.length ? mustBlockIndexes[0] : null;
           const mustBlockBitmap = mustBlockIndex !== null
             ? (1 << mustBlockIndex)
             : allBitmap;
@@ -258,8 +268,8 @@ class MinimumGame {
           );
           const canBuildToBitmap = (
             allBitmap
-            & ~playersBitmap
             & mustBlockBitmap
+            & ~cannotBuildBitmap
           );
           const nextMoves = [];
           for (const selectedWorkerIndex of nextPlayerIndexes) {
@@ -275,14 +285,12 @@ class MinimumGame {
               }
               const buildToIndexes = this.constructor
                 .bitmapToIndexes(
-                  (canBuildToBitmap | (1 << selectedWorkerIndex))
+                  canBuildToBitmap
+                  & ~(playersBitmap & ~(1 << selectedWorkerIndex))
                   & neighboursBitmap[moveToIndex]
                 );
               for (const buildToIndex of buildToIndexes) {
                 if (levels[buildToIndex] > 3) {
-                  continue;
-                }
-                if (levels[buildToIndex] === 2 && (otherPlayerLevel2NeighbourBitmap & (1 << buildToIndex))) {
                   continue;
                 }
                 nextMoves.push([selectedWorkerIndex, moveToIndex, buildToIndex]);
