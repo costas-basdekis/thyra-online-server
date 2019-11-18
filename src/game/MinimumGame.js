@@ -668,6 +668,14 @@ class MinimumGameSearchStep {
           console.error('Null result', this);
           throw new Error('Result is null, there are no next games, and there are no results');
         }
+      } else if (this.track === this.constructor.LOSE) {
+        if (this.resultsWon) {
+          // Pruning
+          this.result = this.constructor.WIN;
+        } else if (this.resultsUndetermined) {
+          // Pruning
+          this.result = this.constructor.UNDETERMINED;
+        }
       }
     }
     if (this.result !== null) {
