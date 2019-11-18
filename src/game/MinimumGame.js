@@ -68,7 +68,11 @@ class MinimumGame {
       .map(([, index]) => index);
 
     return this.createNew(
-      levels, nextPlayerIndexes, otherPlayerIndexes, whiteToPlay, null, null,
+      levels,
+      this.indexesToBitmap(this.indexes.filter(index => levels[index] === 2)),
+      this.indexesToBitmap(this.indexes.filter(index => levels[index] === 3)),
+      this.indexesToBitmap(this.indexes.filter(index => levels[index] === 4)),
+      nextPlayerIndexes, otherPlayerIndexes, whiteToPlay, null, null,
     );
   }
 
@@ -114,6 +118,9 @@ class MinimumGame {
 
   constructor() {
     this.levels = undefined;
+    this.level2 = undefined;
+    this.level3 = undefined;
+    this.level4 = undefined;
     this.nextPlayerIndexes = undefined;
     this.otherPlayerIndexes = undefined;
     this.whiteToPlay = undefined;
@@ -128,8 +135,11 @@ class MinimumGame {
     this._history = undefined;
   }
 
-  fromArgs(levels, nextPlayerIndexes, otherPlayerIndexes, whiteToPlay, previous, moves, pool = null) {
+  fromArgs(levels, level2, level3, level4, nextPlayerIndexes, otherPlayerIndexes, whiteToPlay, previous, moves, pool = null) {
     this.levels = levels;
+    this.level2 = level2;
+    this.level3 = level3;
+    this.level4 = level4;
     this.nextPlayerIndexes = nextPlayerIndexes;
     this.otherPlayerIndexes = otherPlayerIndexes;
     this.whiteToPlay = whiteToPlay;
@@ -174,9 +184,9 @@ class MinimumGame {
   }
 
   copy() {
-    const {levels, nextPlayerIndexes, otherPlayerIndexes, whiteToPlay, previous, moves, pool} = this;
+    const {levels, level2, level3, level4, nextPlayerIndexes, otherPlayerIndexes, whiteToPlay, previous, moves, pool} = this;
     return this.constructor.createNew(
-      levels, nextPlayerIndexes, otherPlayerIndexes, whiteToPlay, previous ? previous.copy() : null,
+      levels, level2, level3, level4, nextPlayerIndexes, otherPlayerIndexes, whiteToPlay, previous ? previous.copy() : null,
       moves, pool);
   }
 
@@ -193,27 +203,19 @@ class MinimumGame {
 
   get lostData() {
     if (this._lostData === undefined) {
-      const {levels, otherPlayerIndexes} = this;
-      const {neighboursIndexes, noneBitmap} = this.constructor;
-      let mustBlockIndex = null, cannotBuildBitmap = noneBitmap, lost = false;
-      onLost: for (const workerIndex of otherPlayerIndexes) {
+      const {levels, otherPlayerIndexes, level2, level3} = this;
+      const {neighboursBitmap, noneBitmap} = this.constructor;
+      let mustBlockBitmap = noneBitmap, cannotBuildBitmap = noneBitmap;
+      for (const workerIndex of otherPlayerIndexes) {
         if (levels[workerIndex] !== 2) {
           continue;
         }
-        for (const neighbour of neighboursIndexes[workerIndex]) {
-          if (levels[neighbour] !== 3) {
-            if (levels[neighbour] === 2) {
-              cannotBuildBitmap |= 1 << neighbour;
-            }
-            continue;
-          }
-          if (mustBlockIndex !== null && mustBlockIndex !== neighbour) {
-            lost = true;
-            break onLost;
-          }
-          mustBlockIndex = neighbour;
-        }
+        cannotBuildBitmap |= neighboursBitmap[workerIndex] & level2;
+        mustBlockBitmap |= neighboursBitmap[workerIndex] & level3;
       }
+      const mustBlockIndexes = this.constructor.bitmapToIndexes(mustBlockBitmap);
+      const lost = mustBlockIndexes.length > 1;
+      const mustBlockIndex = mustBlockIndexes.length ? mustBlockIndexes[0] : null;
 
       this._lostData = [mustBlockIndex, cannotBuildBitmap, lost];
     }
@@ -255,7 +257,7 @@ class MinimumGame {
         }
         this._nextMoves = nextMoves;
       } else {
-        const {levels, nextPlayerIndexes} = this;
+        const {levels, level4, nextPlayerIndexes} = this;
         const {neighboursBitmap} = this.constructor;
         const [mustBlockIndex, cannotBuildBitmap, lost] = this.lostData;
         if (lost) {
@@ -276,6 +278,7 @@ class MinimumGame {
             allBitmap
             & mustBlockBitmap
             & ~cannotBuildBitmap
+            & ~level4
           );
           const nextMoves = [];
           for (const selectedWorkerIndex of nextPlayerIndexes) {
@@ -296,9 +299,6 @@ class MinimumGame {
                   & neighboursBitmap[moveToIndex]
                 );
               for (const buildToIndex of buildToIndexes) {
-                if (levels[buildToIndex] > 3) {
-                  continue;
-                }
                 nextMoves.push([selectedWorkerIndex, moveToIndex, buildToIndex]);
               }
             }
@@ -314,9 +314,12 @@ class MinimumGame {
   get nextGames() {
     if (this._nextGames === undefined) {
       if (!this.nextPlayerIndexes.length) {
-        const {levels, otherPlayerIndexes, whiteToPlay, pool} = this;
+        const {levels, level2, level3, level4, otherPlayerIndexes, whiteToPlay, pool} = this;
         this._nextGames = this.nextMoves.map(workersIndexes => this.makeNext(
           levels,
+          level2,
+          level3,
+          level4,
           otherPlayerIndexes,
           workersIndexes,
           !whiteToPlay,
@@ -326,11 +329,14 @@ class MinimumGame {
         ));
       } else {
         const {buildOnLevel, moveWorker} = this.constructor;
-        const {levels, otherPlayerIndexes, nextPlayerIndexes, whiteToPlay, pool} = this;
+        const {levels, level2, level3, level4, otherPlayerIndexes, nextPlayerIndexes, whiteToPlay, pool} = this;
         this._nextGames = this.nextMoves.map(moves => {
           const [selectedWorkerIndex, moveToIndex, buildToIndex] =  moves;
           return this.makeNext(
             buildOnLevel(levels, buildToIndex),
+            levels[buildToIndex] === 1 ? (level2 | (1 << buildToIndex)) : (levels[buildToIndex] === 2 ? level2 & ~(1 <<buildToIndex) : level2),
+            levels[buildToIndex] === 2 ? (level3 | (1 << buildToIndex)) : (levels[buildToIndex] === 3 ? level3 & ~(1 <<buildToIndex) : level3),
+            levels[buildToIndex] === 3 ? (level4 | (1 << buildToIndex)) : (levels[buildToIndex] === 4 ? level4 & ~(1 <<buildToIndex) : level4),
             otherPlayerIndexes,
             moveWorker(nextPlayerIndexes, selectedWorkerIndex, moveToIndex),
             !whiteToPlay,
@@ -370,6 +376,10 @@ class MinimumGame {
   }
 
   static bitmapToIndexes(bitmap) {
+    if (!bitmap) {
+      return [];
+    }
+
     let remaining = bitmap;
     const indexes = [];
 
