@@ -121,6 +121,7 @@ class MinimumGame {
     this.moves = undefined;
     this.depth = undefined;
     this.makeNext = undefined;
+    this._lostData = undefined;
     this._nextMoves = undefined;
     this._nextGames = undefined;
     this._winner = undefined;
@@ -136,6 +137,7 @@ class MinimumGame {
     this.moves = moves;
     this.depth = previous ? previous.depth + 1 : 0;
     this.makeNext = pool === true ? this.constructor.createFromPool : (pool ? pool : this.constructor.createNew);
+    this._lostData = undefined;
     this._nextMoves = undefined;
     this._nextGames = undefined;
     this._winner = undefined;
@@ -189,22 +191,44 @@ class MinimumGame {
     return this.history.slice(1).map(game => game.fullMoves);
   }
 
+  get lostData() {
+    if (this._lostData === undefined) {
+      const {levels, otherPlayerIndexes} = this;
+      const {neighboursIndexes, noneBitmap} = this.constructor;
+      let mustBlockIndex = null, cannotBuildBitmap = noneBitmap, lost = false;
+      onLost: for (const workerIndex of otherPlayerIndexes) {
+        if (levels[workerIndex] !== 2) {
+          continue;
+        }
+        for (const neighbour of neighboursIndexes[workerIndex]) {
+          if (levels[neighbour] !== 3) {
+            if (levels[neighbour] === 2) {
+              cannotBuildBitmap |= 1 << neighbour;
+            }
+            continue;
+          }
+          if (mustBlockIndex !== null && mustBlockIndex !== neighbour) {
+            lost = true;
+            break onLost;
+          }
+          mustBlockIndex = neighbour;
+        }
+      }
+
+      this._lostData = [mustBlockIndex, cannotBuildBitmap, lost];
+    }
+
+    return this._lostData;
+  }
+
   get lost() {
     if (this._nextMoves === undefined) {
-      const {nextPlayerIndexes, levels, otherPlayerIndexes} = this;
+      const {nextPlayerIndexes} = this;
       if (!nextPlayerIndexes.length) {
         return false;
       }
-      const {noneBitmap, neighboursBitmap} = this.constructor;
-      const otherPlayerLevel2Indexes = otherPlayerIndexes
-        .filter(workerIndex => levels[workerIndex] === 2);
-      const otherPlayerLevel2NeighbourBitmap = otherPlayerLevel2Indexes
-        .map(workerIndex => neighboursBitmap[workerIndex])
-        .reduce((total, current) => total | current, noneBitmap) | noneBitmap;
-      const otherPlayerLevel2NeighbourIndexes = this.constructor.bitmapToIndexes(otherPlayerLevel2NeighbourBitmap);
-      const mustBlockIndexes = otherPlayerLevel2NeighbourIndexes
-        .filter(index => levels[index] === 3);
-      if (mustBlockIndexes.length > 1) {
+      const [, , lost] = this.lostData;
+      if (lost) {
         return true;
       }
     }
@@ -214,7 +238,7 @@ class MinimumGame {
 
   get nextMoves() {
     if (this._nextMoves === undefined) {
-      const {allBitmap, noneBitmap} = this.constructor;
+      const {allBitmap} = this.constructor;
       const {nextPlayerIndexes, otherPlayerIndexes} = this;
       const playersBitmap = (
         this.constructor.indexesToBitmap(nextPlayerIndexes)
@@ -231,27 +255,9 @@ class MinimumGame {
         }
         this._nextMoves = nextMoves;
       } else {
-        const {levels, nextPlayerIndexes, otherPlayerIndexes} = this;
-        const {neighboursIndexes, neighboursBitmap} = this.constructor;
-        let mustBlockIndex = null, cannotBuildBitmap = noneBitmap, lost = false;
-        onLost: for (const workerIndex of otherPlayerIndexes) {
-          if (levels[workerIndex] !== 2) {
-            continue;
-          }
-          for (const neighbour of neighboursIndexes[workerIndex]) {
-            if (levels[neighbour] !== 3) {
-              if (levels[neighbour] === 2) {
-                cannotBuildBitmap |= 1 << neighbour;
-              }
-              continue;
-            }
-            if (mustBlockIndex !== null && mustBlockIndex !== neighbour) {
-              lost = true;
-              break onLost;
-            }
-            mustBlockIndex = neighbour;
-          }
-        }
+        const {levels, nextPlayerIndexes} = this;
+        const {neighboursBitmap} = this.constructor;
+        const [mustBlockIndex, cannotBuildBitmap, lost] = this.lostData;
         if (lost) {
           this._nextMoves = [];
         } else {
