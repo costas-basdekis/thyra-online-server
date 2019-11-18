@@ -69,6 +69,7 @@ class MinimumGame {
 
     return this.createNew(
       levels,
+      this.indexesToBitmap(this.indexes.filter(index => levels[index] <= 1)),
       this.indexesToBitmap(this.indexes.filter(index => levels[index] === 2)),
       this.indexesToBitmap(this.indexes.filter(index => levels[index] === 3)),
       this.indexesToBitmap(this.indexes.filter(index => levels[index] === 4)),
@@ -118,6 +119,7 @@ class MinimumGame {
 
   constructor() {
     this.levels = undefined;
+    this.level01 = undefined;
     this.level2 = undefined;
     this.level3 = undefined;
     this.level4 = undefined;
@@ -135,8 +137,9 @@ class MinimumGame {
     this._history = undefined;
   }
 
-  fromArgs(levels, level2, level3, level4, nextPlayerIndexes, otherPlayerIndexes, whiteToPlay, previous, moves, pool = null) {
+  fromArgs(levels, level01, level2, level3, level4, nextPlayerIndexes, otherPlayerIndexes, whiteToPlay, previous, moves, pool = null) {
     this.levels = levels;
+    this.level01 = level01;
     this.level2 = level2;
     this.level3 = level3;
     this.level4 = level4;
@@ -184,9 +187,9 @@ class MinimumGame {
   }
 
   copy() {
-    const {levels, level2, level3, level4, nextPlayerIndexes, otherPlayerIndexes, whiteToPlay, previous, moves, pool} = this;
+    const {levels, level01, level2, level3, level4, nextPlayerIndexes, otherPlayerIndexes, whiteToPlay, previous, moves, pool} = this;
     return this.constructor.createNew(
-      levels, level2, level3, level4, nextPlayerIndexes, otherPlayerIndexes, whiteToPlay, previous ? previous.copy() : null,
+      levels, level01, level2, level3, level4, nextPlayerIndexes, otherPlayerIndexes, whiteToPlay, previous ? previous.copy() : null,
       moves, pool);
   }
 
@@ -257,7 +260,7 @@ class MinimumGame {
         }
         this._nextMoves = nextMoves;
       } else {
-        const {levels, level4, nextPlayerIndexes} = this;
+        const {levels, level01, level2, level3, level4, nextPlayerIndexes} = this;
         const {neighboursBitmap} = this.constructor;
         const [mustBlockIndex, cannotBuildBitmap, lost] = this.lostData;
         if (lost) {
@@ -282,16 +285,21 @@ class MinimumGame {
           );
           const nextMoves = [];
           for (const selectedWorkerIndex of nextPlayerIndexes) {
-            const maxNeighbourLevel = levels[selectedWorkerIndex] + 1;
+            const selectedWorkerLevel = levels[selectedWorkerIndex];
+            let maxNeighbourLevelBitmap = level01;
+            if (selectedWorkerLevel >= 1) {
+              maxNeighbourLevelBitmap |= level2;
+              if (selectedWorkerLevel >= 2) {
+                maxNeighbourLevelBitmap |= level3;
+              }
+            }
             const moveToIndexes = this.constructor
               .bitmapToIndexes(
                 canMoveToBitmap
                 & neighboursBitmap[selectedWorkerIndex]
+                & maxNeighbourLevelBitmap
               );
             for (const moveToIndex of moveToIndexes) {
-              if (levels[moveToIndex] > maxNeighbourLevel) {
-                continue;
-              }
               const buildToIndexes = this.constructor
                 .bitmapToIndexes(
                   canBuildToBitmap
@@ -314,9 +322,10 @@ class MinimumGame {
   get nextGames() {
     if (this._nextGames === undefined) {
       if (!this.nextPlayerIndexes.length) {
-        const {levels, level2, level3, level4, otherPlayerIndexes, whiteToPlay, pool} = this;
+        const {levels, level01, level2, level3, level4, otherPlayerIndexes, whiteToPlay, pool} = this;
         this._nextGames = this.nextMoves.map(workersIndexes => this.makeNext(
           levels,
+          level01,
           level2,
           level3,
           level4,
@@ -329,14 +338,15 @@ class MinimumGame {
         ));
       } else {
         const {buildOnLevel, moveWorker} = this.constructor;
-        const {levels, level2, level3, level4, otherPlayerIndexes, nextPlayerIndexes, whiteToPlay, pool} = this;
+        const {levels, level01, level2, level3, level4, otherPlayerIndexes, nextPlayerIndexes, whiteToPlay, pool} = this;
         this._nextGames = this.nextMoves.map(moves => {
           const [selectedWorkerIndex, moveToIndex, buildToIndex] =  moves;
           return this.makeNext(
             buildOnLevel(levels, buildToIndex),
+            levels[buildToIndex] === 1 ? level01 & ~(1 <<buildToIndex) : level01,
             levels[buildToIndex] === 1 ? (level2 | (1 << buildToIndex)) : (levels[buildToIndex] === 2 ? level2 & ~(1 <<buildToIndex) : level2),
             levels[buildToIndex] === 2 ? (level3 | (1 << buildToIndex)) : (levels[buildToIndex] === 3 ? level3 & ~(1 <<buildToIndex) : level3),
-            levels[buildToIndex] === 3 ? (level4 | (1 << buildToIndex)) : (levels[buildToIndex] === 4 ? level4 & ~(1 <<buildToIndex) : level4),
+            levels[buildToIndex] === 3 ? (level4 | (1 << buildToIndex)) : level4,
             otherPlayerIndexes,
             moveWorker(nextPlayerIndexes, selectedWorkerIndex, moveToIndex),
             !whiteToPlay,
