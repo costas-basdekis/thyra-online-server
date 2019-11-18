@@ -338,15 +338,27 @@ class MinimumGame {
         ));
       } else {
         const {buildOnLevel, moveWorker} = this.constructor;
-        const {levels, level01, level2, level3, level4, otherPlayerIndexes, nextPlayerIndexes, whiteToPlay, pool} = this;
+        const {levels, otherPlayerIndexes, nextPlayerIndexes, whiteToPlay, pool} = this;
         this._nextGames = this.nextMoves.map(moves => {
           const [selectedWorkerIndex, moveToIndex, buildToIndex] =  moves;
+          let {level01, level2, level3, level4} = this;
+          const buildToLevel = levels[buildToIndex];
+          if (buildToLevel === 1) {
+            level01 &= ~(1 << buildToIndex);
+            level2 |= 1 << buildToIndex;
+          } else if (buildToLevel === 2) {
+            level2 &= ~(1 << buildToIndex);
+            level3 |= 1 << buildToIndex;
+          } else if (buildToLevel === 3) {
+            level3 &= ~(1 << buildToIndex);
+            level4 |= 1 << buildToIndex;
+          }
           return this.makeNext(
             buildOnLevel(levels, buildToIndex),
-            levels[buildToIndex] === 1 ? level01 & ~(1 <<buildToIndex) : level01,
-            levels[buildToIndex] === 1 ? (level2 | (1 << buildToIndex)) : (levels[buildToIndex] === 2 ? level2 & ~(1 <<buildToIndex) : level2),
-            levels[buildToIndex] === 2 ? (level3 | (1 << buildToIndex)) : (levels[buildToIndex] === 3 ? level3 & ~(1 <<buildToIndex) : level3),
-            levels[buildToIndex] === 3 ? (level4 | (1 << buildToIndex)) : level4,
+            level01,
+            level2,
+            level3,
+            level4,
             otherPlayerIndexes,
             moveWorker(nextPlayerIndexes, selectedWorkerIndex, moveToIndex),
             !whiteToPlay,
