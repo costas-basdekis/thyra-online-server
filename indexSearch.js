@@ -8,8 +8,8 @@ const puzzles = [
   {position: 'JEJJGJACAEAAAFDGADAAAGAAA', maxDepth: 7},
   {position: 'AGADAIACAADBAAAAADAAAAAED', maxDepth: 9},
 ];
-const puzzle = puzzles[2];
-console.log(`Solving ${puzzle.position} with depth ${puzzle.maxDepth}`);
+const puzzle = puzzles[4];
+console.log(`Solving ${puzzle.position} (#${MinimumGame.fromPosition(puzzle.position).hash}) with depth ${puzzle.maxDepth}`);
 ss1=MinimumGame.solvePosition({...puzzle, usePool: true});
 const allHistoryMoves = (ss1.root.leaves || []).map(game => game.historyFullMoves);
 const expectedHistoryMoves = {
@@ -3407,8 +3407,8 @@ const expectedHistoryMoves = {
 ],
 }[puzzle.position];
 if (expectedHistoryMoves) {
-  const missingMoves = _.differenceBy(expectedHistoryMoves, allHistoryMoves, historyMoves => JSON.stringify(historyMoves));
-  const extraMoves = _.differenceBy(allHistoryMoves, expectedHistoryMoves, historyMoves => JSON.stringify(historyMoves));
+  const missingMoves = _.differenceBy(new Set(expectedHistoryMoves), new Set(allHistoryMoves), historyMoves => JSON.stringify(historyMoves));
+  const extraMoves = _.differenceBy(new Set(allHistoryMoves), new Set(expectedHistoryMoves), historyMoves => JSON.stringify(historyMoves));
   if (missingMoves.length || extraMoves.length) {
     throw new Error(`Wrong set of moves returned: ${missingMoves.length} are missing, and ${extraMoves.length} are added`);
   } else {
