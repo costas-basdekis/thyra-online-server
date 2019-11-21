@@ -1,6 +1,7 @@
 const _ = require('lodash');
 const moment = require('moment');
 const deePool = require('deepool');
+const utils = require('../utils');
 
 class MinimumGame {
   static PLAYER_A = 'player-a';
@@ -521,8 +522,8 @@ class MinimumGameSearch {
           ` ---\n`,
           `${totalStepCount !== Infinity ? `${Math.round(counter / totalStepCount * 1000) / 10}% of steps, ` : ''}${Math.round(completionRatio * 100)}% of games, pool sizes: ${MinimumGame.pool.size()} games, ${MinimumGameSearchStep.pool.size()} steps\n`,
           root.leaves ? `${root.leaves.length} solutions found, of depth ${root.leaves[0].depth}\n` : `no solutions\n`,
-          `total ${this.totalGameCount} games created, in ${moment.duration(totalTime).humanize()}, ${totalGamesPerSecond}g/s, ${moment.duration(totalTimeLeftEstimation).humanize()} left\n`,
-          `current ${gameCountSinceLastTime} games created, in ${moment.duration(sinceLastTime).humanize()}, ${currentGamesPerSecond}g/s, ${moment.duration(currentTimeLeftEstimation).humanize()} left`,
+          `total ${utils.abbreviateNumber(this.totalGameCount)} games created, in ${moment.duration(totalTime).humanize()}, ${utils.abbreviateNumber(totalGamesPerSecond)}g/s, ${moment.duration(totalTimeLeftEstimation).humanize()} left\n`,
+          `current ${utils.abbreviateNumber(gameCountSinceLastTime)} games created, in ${moment.duration(sinceLastTime).humanize()}, ${utils.abbreviateNumber(currentGamesPerSecond)}g/s, ${moment.duration(currentTimeLeftEstimation).humanize()} left`,
         );
       },
       getTotalTime: () => {
