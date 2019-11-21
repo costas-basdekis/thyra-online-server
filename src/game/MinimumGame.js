@@ -521,6 +521,7 @@ class MinimumGameSearch {
         console.log(
           ` ---\n`,
           `${totalStepCount !== Infinity ? `${Math.round(counter / totalStepCount * 1000) / 10}% of steps, ` : ''}${Math.round(completionRatio * 100)}% of games, pool sizes: ${MinimumGame.pool.size()} games, ${MinimumGameSearchStep.pool.size()} steps\n`,
+          `Memory usage: RSS: ${utils.abbreviateNumber(memoryUsage.rss)}, Heap total: ${utils.abbreviateNumber(memoryUsage.heapTotal)}, Heap used: ${utils.abbreviateNumber(memoryUsage.heapUsed)}, External: ${utils.abbreviateNumber(memoryUsage.external)}\n`,
           root.leaves ? `${root.leaves.length} solutions found, of depth ${root.leaves[0].depth}\n` : `no solutions\n`,
           `total ${utils.abbreviateNumber(this.totalGameCount)} games created, in ${moment.duration(totalTime).humanize()}, ${utils.abbreviateNumber(totalGamesPerSecond)}g/s, ${moment.duration(totalTimeLeftEstimation).humanize()} left\n`,
           `current ${utils.abbreviateNumber(gameCountSinceLastTime)} games created, in ${moment.duration(sinceLastTime).humanize()}, ${utils.abbreviateNumber(currentGamesPerSecond)}g/s, ${moment.duration(currentTimeLeftEstimation).humanize()} left`,
