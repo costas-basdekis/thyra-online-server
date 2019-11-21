@@ -136,6 +136,7 @@ class MinimumGame {
     this._nextGames = undefined;
     this._winner = undefined;
     this._history = undefined;
+    this._hash = undefined;
   }
 
   fromArgs(levels, level01, level2, level3, level4, nextPlayerIndexes, otherPlayerIndexes, whiteToPlay, previous, moves, pool = null) {
@@ -156,6 +157,7 @@ class MinimumGame {
     this._nextGames = undefined;
     this._winner = undefined;
     this._history = undefined;
+    this._hash = undefined;
   }
 
   usePool() {
@@ -192,6 +194,15 @@ class MinimumGame {
     return this.constructor.createNew(
       levels, level01, level2, level3, level4, nextPlayerIndexes, otherPlayerIndexes, whiteToPlay, previous ? previous.copy() : null,
       moves, pool);
+  }
+
+  get hash() {
+    if (this._hash === undefined) {
+      const {levels, nextPlayerIndexes, otherPlayerIndexes} = this;
+      this._hash = `${levels.join('')},${this.constructor.indexesToBitmap(nextPlayerIndexes)},${this.constructor.indexesToBitmap(otherPlayerIndexes)}`;
+    }
+
+    return this._hash;
   }
 
   get fullMoves() {
@@ -459,11 +470,46 @@ class MinimumGame {
 }
 
 class MinimumGameSearch {
-  constructor(game, maxDepth, pool = null) {
-      this.totalGameCount = 0;
-      this.totalTime = 0;
-      this.root = MinimumGameSearchStep.createNew(this, game, maxDepth, null, pool);
-      this.step = this.root;
+  constructor(game, maxDepth, pool = null, maxDepthCache = 100) {
+    this.totalGameCount = 0;
+    this.totalTime = 0;
+    this.maxDepth = maxDepth;
+    this.maxDepthCache = maxDepthCache;
+    this.hashMapsByDepth = _.range(maxDepth + 1).map(() => new Map());
+    this.uniqueHashesByDepth = _.range(maxDepth + 1).map(() => 0);
+    this.repeatedHashesByDepth = _.range(maxDepth + 1).map(() => 0);
+
+    this.root = MinimumGameSearchStep.createNew(this, game, maxDepth, null, pool);
+    this.step = this.root;
+  }
+
+  getCachedStep(game) {
+    const depth = game.depth;
+    if (depth > this.maxDepthCache) {
+      return null;
+    }
+    const cachedResult = this.hashMapsByDepth[depth].get(game.hash) || null;
+    if (cachedResult !== null) {
+      this.repeatedHashesByDepth[depth] += 1;
+    } else {
+      this.uniqueHashesByDepth[depth] += 1;
+    }
+
+    return cachedResult
+  }
+
+  cacheStep(step) {
+    if (step.game.depth > this.maxDepthCache) {
+      return;
+    }
+    if (step.result === step.track) {
+      return;
+    }
+    let hashMap = this.hashMapsByDepth[step.game.depth];
+    if (hashMap.size > 100000) {
+      hashMap = this.hashMapsByDepth[step.game.depth] = new Map();
+    }
+    hashMap.set(step.game.hash, step.result);
   }
 
   get finished() {
@@ -518,9 +564,15 @@ class MinimumGameSearch {
         const gameLeftCount = this.totalGameCount / completionRatio * (1 - completionRatio);
         const totalTimeLeftEstimation = gameLeftCount / totalGamesPerSecond * 1000;
         const currentTimeLeftEstimation = gameLeftCount / currentGamesPerSecond * 1000;
+        const totalHashesByDepth = _.range(this.maxDepth + 1).map(depth => this.uniqueHashesByDepth[depth] + this.repeatedHashesByDepth[depth]);
+        const repeatedHashes = _.sum(this.repeatedHashesByDepth);
+        const totalHashes = _.sum(totalHashesByDepth);
+        const memoryUsage = process.memoryUsage();
         console.log(
           ` ---\n`,
           `${totalStepCount !== Infinity ? `${Math.round(counter / totalStepCount * 1000) / 10}% of steps, ` : ''}${Math.round(completionRatio * 100)}% of games, pool sizes: ${MinimumGame.pool.size()} games, ${MinimumGameSearchStep.pool.size()} steps\n`,
+          `${utils.abbreviateNumber(totalHashes)} locations, ${utils.abbreviateNumber(_.sumBy(this.hashMapsByDepth, 'size'))} in memory, ${totalHashes ? Math.round(repeatedHashes / totalHashes * 100) : 0}% repeated (${_.range(this.maxDepth + 1).map(depth => `${depth}: ${totalHashesByDepth[depth] ? Math.round(this.repeatedHashesByDepth[depth] / totalHashesByDepth[depth] * 100) : 0}%`).join(', ')})\n`,
+          totalHashes ? `${utils.abbreviateNumber(totalHashes)} locations, ${_.range(this.maxDepth + 1).map(depth => `${depth}: ${Math.round(totalHashesByDepth[depth] / totalHashes * 100)}%`).join(', ')}\n` : '',
           `Memory usage: RSS: ${utils.abbreviateNumber(memoryUsage.rss)}, Heap total: ${utils.abbreviateNumber(memoryUsage.heapTotal)}, Heap used: ${utils.abbreviateNumber(memoryUsage.heapUsed)}, External: ${utils.abbreviateNumber(memoryUsage.external)}\n`,
           root.leaves ? `${root.leaves.length} solutions found, of depth ${root.leaves[0].depth}\n` : `no solutions\n`,
           `total ${utils.abbreviateNumber(this.totalGameCount)} games created, in ${moment.duration(totalTime).humanize()}, ${utils.abbreviateNumber(totalGamesPerSecond)}g/s, ${moment.duration(totalTimeLeftEstimation).humanize()} left\n`,
@@ -576,24 +628,22 @@ class MinimumGameSearchStep {
 
   fromArgs(search, game, maxDepth, previous = null, pool = null) {
     const {WIN, LOSE, UNDETERMINED} = this.constructor;
-    // const result = game.finished
-    //   ? LOSE
-    //   : (
-    //     maxDepth > 0
-    //       ? null
-    //       : UNDETERMINED
-    //   );
-    const result = maxDepth > 0
-      ? (
-        game.finished
-          ? LOSE
-          : null
-      )
+    const cachedResult = search.getCachedStep(game);
+    const result = cachedResult !== null
+      ? cachedResult
       : (
-        game.lost
-          ? LOSE
-          : UNDETERMINED
-      );
+        maxDepth > 0
+          ? (
+            game.finished
+              ? LOSE
+              : null
+          )
+          : (
+            game.lost
+              ? LOSE
+              : UNDETERMINED
+          )
+    );
     const nextGames = result === null ? game.nextGames : [];
     game._nextMoves = undefined;
     game._nextGames = undefined;
@@ -608,7 +658,13 @@ class MinimumGameSearchStep {
     this.track = !previous || previous.track === LOSE
       ? WIN
       : LOSE;
-    this.leaves = this.track === result ? [game.copy()] : null;
+    this.leaves = cachedResult !== null
+      ? null
+      : (
+        this.track === result
+          ? [game.copy()]
+          : null
+      );
     this.previous = previous;
     this.maxDepth = maxDepth;
 
@@ -694,6 +750,7 @@ class MinimumGameSearchStep {
     }
     if (this.result !== null) {
       this.propagateResult();
+      this.search.cacheStep(this);
       if (!this.previous) {
         console.log('finished');
         return this;
