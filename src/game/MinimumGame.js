@@ -78,8 +78,12 @@ class MinimumGame {
     );
   }
 
-  toPosition() {
-    return this.toFullGame().positionNotation;
+  get position() {
+    if (this._position === undefined) {
+      this._position = this.toFullGame().positionNotation;
+    }
+
+    return this._position;
   }
 
   toFullGame() {
@@ -137,6 +141,7 @@ class MinimumGame {
     this._winner = undefined;
     this._history = undefined;
     this._hash = undefined;
+    this._position = undefined;
   }
 
   fromArgs(levels, level01, level2, level3, level4, nextPlayerIndexes, otherPlayerIndexes, whiteToPlay, previous, moves, pool = null) {
@@ -158,6 +163,7 @@ class MinimumGame {
     this._winner = undefined;
     this._history = undefined;
     this._hash = undefined;
+    this._position = undefined;
   }
 
   usePool() {
@@ -562,6 +568,7 @@ class MinimumGameSearch {
       lastTime: startTime,
       lastGameCount: this.totalGameCount,
       reportStepCount, totalStepCount,
+      previousChain: [],
       report: counter => {
         if (!(counter % reportStepCount === 0 || this.finished)) {
           return;
@@ -590,9 +597,14 @@ class MinimumGameSearch {
             : 0)
           .reverse()
           .reduce((total, current) => current + (1 - current) * total);
+        const previousChain = timer.previousChain;
+        const chain = this.step.chain;
+        timer.previousChain = chain.map(step => step.game.position);
         console.log(
           ` ---\n`,
           `${totalStepCount !== Infinity ? `${Math.round(counter / totalStepCount * 1000) / 10}% of steps, ` : ''}${Math.round(completionRatio * 100 * 1000) / 1000}% of games (est. ${utils.abbreviateNumber(estimatedGameCount)}/${utils.abbreviateNumber(Math.pow(33, this.maxDepth))}), pool sizes: ${MinimumGame.pool.size()} games, ${MinimumGameSearchStep.pool.size()} steps\n`,
+          `Games:\n` +
+          chain.map(step => `  Depth ${step.game.depth}: ${step.game.position}, ${`${step.nextGamesCount - step.nextGamesLeft.length}/${step.nextGamesCount}`.padEnd(7, ' ')} - ${`${step.nextGamesCount ? Math.round(Math.max(0, step.nextGamesCount - step.nextGamesLeft.length - 1) / step.nextGamesCount * 100) : 100}%`.padEnd(4, ' ')} ${previousChain.includes(step.game.position) ? '' : '<-----'}\n`).join(''),
           counter ? `  ${`Early pruned: ${utils.abbreviateNumber(totalEarlyPruned)}`.padEnd(20, ' ')} ${_.range(this.maxDepth + 1).map(depth => `${depth}: ${Math.round(this.earlyExitCountByDepth[depth] / totalEarlyPruned * 100)}%`).map(text => text.padEnd(9, ' ')).join(', ')}\n` : '',
           `Hashes:\n`,
           totalHashes ? `  ${`Created:      ${utils.abbreviateNumber(totalHashes)}`.padEnd(20, ' ')} ${_.range(this.maxDepth + 1).map(depth => `${depth}: ${Math.round(totalHashesByDepth[depth] / totalHashes * 100)}%`).map(text => text.padEnd(9, ' ')).join(', ')}\n` : '',
@@ -618,7 +630,7 @@ class MinimumGameSearch {
 
   static toDictPositions(list) {
     return _.mapValues(
-      _.groupBy(list,history => history[0].toPosition()),
+      _.groupBy(list,history => history[0].position),
       nextList => ({
           moves: nextList.length ? nextList[0][0].fullMoves : null,
           next: this.toDictPositions(nextList
@@ -730,6 +742,10 @@ class MinimumGameSearchStep {
 
   get completionRatio() {
     return this.getCompletionRatio();
+  }
+
+  get chain() {
+    return [this].concat(this.previous ? this.previous.chain : []);
   }
 
   getCompletionRatio(nextRatio = null) {
