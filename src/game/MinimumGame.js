@@ -571,7 +571,8 @@ class MinimumGameSearch {
         const completionRatio = this.completionRatio;
         const totalGamesPerSecond = Math.round(this.totalGameCount / totalTime * 1000);
         const currentGamesPerSecond = Math.round(gameCountSinceLastTime / sinceLastTime * 1000);
-        const gameLeftCount = this.totalGameCount / completionRatio * (1 - completionRatio);
+        const estimatedGameCount = this.totalGameCount / completionRatio;
+        const gameLeftCount = estimatedGameCount * (1 - completionRatio);
         const totalTimeLeftEstimation = gameLeftCount / totalGamesPerSecond * 1000;
         const currentTimeLeftEstimation = gameLeftCount / currentGamesPerSecond * 1000;
         const totalHashesByDepth = _.range(this.maxDepth + 1).map(depth => this.uniqueHashesByDepth[depth] + this.repeatedHashesByDepth[depth]);
@@ -586,7 +587,7 @@ class MinimumGameSearch {
           .reduce((total, current) => current + (1 - current) * total);
         console.log(
           ` ---\n`,
-          `${totalStepCount !== Infinity ? `${Math.round(counter / totalStepCount * 1000) / 10}% of steps, ` : ''}${Math.round(completionRatio * 100 * 1000) / 1000}% of games, pool sizes: ${MinimumGame.pool.size()} games, ${MinimumGameSearchStep.pool.size()} steps\n`,
+          `${totalStepCount !== Infinity ? `${Math.round(counter / totalStepCount * 1000) / 10}% of steps, ` : ''}${Math.round(completionRatio * 100 * 1000) / 1000}% of games (est. ${utils.abbreviateNumber(estimatedGameCount)}/${utils.abbreviateNumber(Math.pow(33, this.maxDepth))}), pool sizes: ${MinimumGame.pool.size()} games, ${MinimumGameSearchStep.pool.size()} steps\n`,
           `Hashes:\n`,
           totalHashes ? `  ${`Created:   ${utils.abbreviateNumber(totalHashes)}`.padEnd(20, ' ')} ${_.range(this.maxDepth + 1).map(depth => `${depth}: ${Math.round(totalHashesByDepth[depth] / totalHashes * 100)}%`).map(text => text.padEnd(9, ' ')).join(', ')}\n` : '',
           totalHashes ? `  ${`In memory: ${utils.abbreviateNumber(_.sumBy(this.hashMapsByDepth, 'size'))}`.padEnd(20, ' ')} ${_.range(this.maxDepth + 1).map(depth => `${depth}: ${utils.abbreviateNumber(this.hashMapsByDepth[depth].size)}`).map(text => text.padEnd(9, ' ')).join(', ')}\n` : '',
