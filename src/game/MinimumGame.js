@@ -474,6 +474,7 @@ class MinimumGameSearch {
     this.totalGameCount = 0;
     this.totalTime = 0;
     this.maxDepth = maxDepth;
+    this.earlyExitCountByDepth = _.range(maxDepth + 1).map(() => 0);
     this.maxCacheDepth = maxCacheDepth;
     this.maxCacheSize = maxCacheSize;
     this.maxCacheRelativeDepth = maxCacheRelativeDepth;
@@ -483,6 +484,10 @@ class MinimumGameSearch {
 
     this.root = MinimumGameSearchStep.createNew(this, game, maxDepth, null, pool);
     this.step = this.root;
+  }
+
+  pruned(step) {
+    this.earlyExitCountByDepth[step.game.depth + 1] += step.nextGamesLeft.length;
   }
 
   getCachedStep(game) {
@@ -575,8 +580,8 @@ class MinimumGameSearch {
         const gameLeftCount = estimatedGameCount * (1 - completionRatio);
         const totalTimeLeftEstimation = gameLeftCount / totalGamesPerSecond * 1000;
         const currentTimeLeftEstimation = gameLeftCount / currentGamesPerSecond * 1000;
+        const totalEarlyPruned = _.sum(this.earlyExitCountByDepth);
         const totalHashesByDepth = _.range(this.maxDepth + 1).map(depth => this.uniqueHashesByDepth[depth] + this.repeatedHashesByDepth[depth]);
-        const repeatedHashes = _.sum(this.repeatedHashesByDepth);
         const totalHashes = _.sum(totalHashesByDepth);
         const memoryUsage = process.memoryUsage();
         const totalRepeatedRatio = _.range(this.maxDepth + 1)
@@ -588,10 +593,11 @@ class MinimumGameSearch {
         console.log(
           ` ---\n`,
           `${totalStepCount !== Infinity ? `${Math.round(counter / totalStepCount * 1000) / 10}% of steps, ` : ''}${Math.round(completionRatio * 100 * 1000) / 1000}% of games (est. ${utils.abbreviateNumber(estimatedGameCount)}/${utils.abbreviateNumber(Math.pow(33, this.maxDepth))}), pool sizes: ${MinimumGame.pool.size()} games, ${MinimumGameSearchStep.pool.size()} steps\n`,
+          counter ? `  ${`Early pruned: ${utils.abbreviateNumber(totalEarlyPruned)}`.padEnd(20, ' ')} ${_.range(this.maxDepth + 1).map(depth => `${depth}: ${Math.round(this.earlyExitCountByDepth[depth] / totalEarlyPruned * 100)}%`).map(text => text.padEnd(9, ' ')).join(', ')}\n` : '',
           `Hashes:\n`,
-          totalHashes ? `  ${`Created:   ${utils.abbreviateNumber(totalHashes)}`.padEnd(20, ' ')} ${_.range(this.maxDepth + 1).map(depth => `${depth}: ${Math.round(totalHashesByDepth[depth] / totalHashes * 100)}%`).map(text => text.padEnd(9, ' ')).join(', ')}\n` : '',
-          totalHashes ? `  ${`In memory: ${utils.abbreviateNumber(_.sumBy(this.hashMapsByDepth, 'size'))}`.padEnd(20, ' ')} ${_.range(this.maxDepth + 1).map(depth => `${depth}: ${utils.abbreviateNumber(this.hashMapsByDepth[depth].size)}`).map(text => text.padEnd(9, ' ')).join(', ')}\n` : '',
-          totalHashes ? `  ${`Repeated:  ${Math.round(totalRepeatedRatio * 100)}%`.padEnd(20, ' ')} ${_.range(this.maxDepth + 1).map(depth => `${depth}: ${totalHashesByDepth[depth] ? Math.round(this.repeatedHashesByDepth[depth] / totalHashesByDepth[depth] * 100) : 0}%`).map(text => text.padEnd(9, ' ')).join(', ')}\n` : '',
+          totalHashes ? `  ${`Created:      ${utils.abbreviateNumber(totalHashes)}`.padEnd(20, ' ')} ${_.range(this.maxDepth + 1).map(depth => `${depth}: ${Math.round(totalHashesByDepth[depth] / totalHashes * 100)}%`).map(text => text.padEnd(9, ' ')).join(', ')}\n` : '',
+          totalHashes ? `  ${`In memory:    ${utils.abbreviateNumber(_.sumBy(this.hashMapsByDepth, 'size'))}`.padEnd(20, ' ')} ${_.range(this.maxDepth + 1).map(depth => `${depth}: ${utils.abbreviateNumber(this.hashMapsByDepth[depth].size)}`).map(text => text.padEnd(9, ' ')).join(', ')}\n` : '',
+          totalHashes ? `  ${`Repeated:     ${Math.round(totalRepeatedRatio * 100)}%`.padEnd(20, ' ')} ${_.range(this.maxDepth + 1).map(depth => `${depth}: ${totalHashesByDepth[depth] ? Math.round(this.repeatedHashesByDepth[depth] / totalHashesByDepth[depth] * 100) : 0}%`).map(text => text.padEnd(9, ' ')).join(', ')}\n` : '',
           `Memory usage: RSS: ${utils.abbreviateNumber(memoryUsage.rss)}, Heap total: ${utils.abbreviateNumber(memoryUsage.heapTotal)}, Heap used: ${utils.abbreviateNumber(memoryUsage.heapUsed)}, External: ${utils.abbreviateNumber(memoryUsage.external)}\n`,
           root.leaves ? `${root.leaves.length} solutions found, of depth ${root.leaves[0].depth}\n` : `no solutions\n`,
           `total ${utils.abbreviateNumber(this.totalGameCount)} games created, in ${moment.duration(totalTime).humanize()}, ${utils.abbreviateNumber(totalGamesPerSecond)}g/s, ${moment.duration(totalTimeLeftEstimation).humanize()} left\n`,
@@ -761,9 +767,11 @@ class MinimumGameSearchStep {
         if (this.resultsWon) {
           // Pruning
           this.result = this.constructor.WIN;
+          this.search.pruned(this);
         } else if (this.resultsUndetermined) {
           // Pruning
           this.result = this.constructor.UNDETERMINED;
+          this.search.pruned(this);
         }
       }
     }
