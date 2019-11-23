@@ -603,7 +603,12 @@ class MinimumGameSearch {
         timer.previousChain = chain.map(step => step.game.position);
         console.log(
           ` ---\n`,
-          `${totalStepCount !== Infinity ? `${Math.round(counter / totalStepCount * 1000) / 10}% of steps, ` : ''}${Math.round(completionRatio * 100 * 1000) / 1000}% of games (est. ${utils.abbreviateNumber(estimatedGameCount)}/${utils.abbreviateNumber(estimatedGameCount2)}/${utils.abbreviateNumber(Math.pow(33, this.maxDepth))}), pool sizes: ${MinimumGame.pool.size()} games, ${MinimumGameSearchStep.pool.size()} steps\n`,
+          (totalStepCount !== Infinity ? `${Math.round(counter / totalStepCount * 1000) / 10}% of steps, ` : '')
+          + `${Math.round(completionRatio * 100 * 1000) / 1000}% of games `
+          + `(est. ${utils.abbreviateNumber(estimatedGameCount)} ~${Math.round(Math.pow(estimatedGameCount, 1 / this.maxDepth) * 10) / 10}^${this.maxDepth}`
+          + `, or ${utils.abbreviateNumber(estimatedGameCount2)} ~${Math.round(Math.pow(estimatedGameCount2, 1 / this.maxDepth) * 10) / 10}^${this.maxDepth}`
+          + `, or ${utils.abbreviateNumber(Math.pow(33, this.maxDepth))} ~33^${this.maxDepth}`
+          + `), pool sizes: ${MinimumGame.pool.size()} games, ${MinimumGameSearchStep.pool.size()} steps\n`,
           counter ? `  ${`Early pruned: ${utils.abbreviateNumber(totalEarlyPruned)}`.padEnd(20, ' ')} ${_.range(this.maxDepth + 1).map(depth => `${depth}: ${Math.round(this.earlyExitCountByDepth[depth] / totalEarlyPruned * 100)}%`).map(text => text.padEnd(9, ' ')).join(', ')}\n` : '',
           `Games:\n` +
           chain.map(step => `   Depth ${step.game.depth}: ${step.game.position}, ${`${step.nextGamesCount - step.nextGamesLeft.length}/${step.nextGamesCount}`.padEnd(7, ' ')} - ${`${step.nextGamesCount ? Math.round(Math.max(0, step.nextGamesCount - step.nextGamesLeft.length - 1) / step.nextGamesCount * 100) : 100}%`.padEnd(4, ' ')} ${previousChain.includes(step.game.position) ? '' : '<-----'}\n`).join(''),
