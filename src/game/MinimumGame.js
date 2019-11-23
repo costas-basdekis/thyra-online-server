@@ -464,7 +464,7 @@ class MinimumGame {
     return this._history;
   }
 
-  search(maxDepth, pool = null) {
+  search(maxDepth, pool = false) {
     return new MinimumGameSearch(this, maxDepth, pool);
   }
 }
@@ -779,7 +779,7 @@ class MinimumGameSearchStep {
     }
 
     const nextGame = this.nextGamesLeft.shift();
-    return this.makeNext(this.search, nextGame, this.maxDepth - 1, this);
+    return this.makeNext(this.search, nextGame, this.maxDepth - 1, this, this.makeNext);
   }
 
   propagateResult() {
