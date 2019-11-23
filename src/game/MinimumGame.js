@@ -476,7 +476,7 @@ class MinimumGame {
 }
 
 class MinimumGameSearch {
-  constructor(game, maxDepth, pool = null, maxCacheDepth = Infinity, maxCacheSize = 10 * 1000 * 1000, maxCacheRelativeDepth = 4) {
+  constructor(game, maxDepth, pool = null, maxCacheDepth = Infinity, maxCacheSize = 5 * 1000 * 1000, maxCacheRelativeDepth = 4) {
     this.totalGameCount = 0;
     this.totalTime = 0;
     this.maxDepth = maxDepth;
