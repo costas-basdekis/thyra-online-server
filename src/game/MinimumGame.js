@@ -470,11 +470,13 @@ class MinimumGame {
 }
 
 class MinimumGameSearch {
-  constructor(game, maxDepth, pool = null, maxDepthCache = 100) {
+  constructor(game, maxDepth, pool = null, maxCacheDepth = Infinity, maxCacheSize = 10 * 1000 * 1000, maxCacheRelativeDepth = 4) {
     this.totalGameCount = 0;
     this.totalTime = 0;
     this.maxDepth = maxDepth;
-    this.maxDepthCache = maxDepthCache;
+    this.maxCacheDepth = maxCacheDepth;
+    this.maxCacheSize = maxCacheSize;
+    this.maxCacheRelativeDepth = maxCacheRelativeDepth;
     this.hashMapsByDepth = _.range(maxDepth + 1).map(() => new Map());
     this.uniqueHashesByDepth = _.range(maxDepth + 1).map(() => 0);
     this.repeatedHashesByDepth = _.range(maxDepth + 1).map(() => 0);
@@ -485,7 +487,7 @@ class MinimumGameSearch {
 
   getCachedStep(game) {
     const depth = game.depth;
-    if (depth > this.maxDepthCache) {
+    if (depth > this.maxCacheDepth) {
       return null;
     }
     const cachedResult = this.hashMapsByDepth[depth].get(game.hash) || null;
@@ -499,17 +501,25 @@ class MinimumGameSearch {
   }
 
   cacheStep(step) {
-    if (step.game.depth > this.maxDepthCache) {
+    if (step.game.depth > this.maxCacheDepth) {
       return;
     }
     if (step.result === step.track) {
       return;
     }
     let hashMap = this.hashMapsByDepth[step.game.depth];
-    if (hashMap.size > 100000) {
+    if (hashMap.size > this.maxCacheSize) {
       hashMap = this.hashMapsByDepth[step.game.depth] = new Map();
     }
+    this.clearCacheAtDepth(step.game.depth + this.maxCacheRelativeDepth);
     hashMap.set(step.game.hash, step.result);
+  }
+
+  clearCacheAtDepth(depth) {
+    if (depth > this.maxCacheDepth) {
+      return;
+    }
+    this.hashMapsByDepth[depth] = new Map();
   }
 
   get finished() {
@@ -568,11 +578,19 @@ class MinimumGameSearch {
         const repeatedHashes = _.sum(this.repeatedHashesByDepth);
         const totalHashes = _.sum(totalHashesByDepth);
         const memoryUsage = process.memoryUsage();
+        const totalRepeatedRatio = _.range(this.maxDepth + 1)
+          .map(depth => totalHashesByDepth[depth]
+            ? this.repeatedHashesByDepth[depth] / totalHashesByDepth[depth]
+            : 0)
+          .reverse()
+          .reduce((total, current) => current + (1 - current) * total);
         console.log(
           ` ---\n`,
-          `${totalStepCount !== Infinity ? `${Math.round(counter / totalStepCount * 1000) / 10}% of steps, ` : ''}${Math.round(completionRatio * 100)}% of games, pool sizes: ${MinimumGame.pool.size()} games, ${MinimumGameSearchStep.pool.size()} steps\n`,
-          `${utils.abbreviateNumber(totalHashes)} locations, ${utils.abbreviateNumber(_.sumBy(this.hashMapsByDepth, 'size'))} in memory, ${totalHashes ? Math.round(repeatedHashes / totalHashes * 100) : 0}% repeated (${_.range(this.maxDepth + 1).map(depth => `${depth}: ${totalHashesByDepth[depth] ? Math.round(this.repeatedHashesByDepth[depth] / totalHashesByDepth[depth] * 100) : 0}%`).join(', ')})\n`,
-          totalHashes ? `${utils.abbreviateNumber(totalHashes)} locations, ${_.range(this.maxDepth + 1).map(depth => `${depth}: ${Math.round(totalHashesByDepth[depth] / totalHashes * 100)}%`).join(', ')}\n` : '',
+          `${totalStepCount !== Infinity ? `${Math.round(counter / totalStepCount * 1000) / 10}% of steps, ` : ''}${Math.round(completionRatio * 100 * 1000) / 1000}% of games, pool sizes: ${MinimumGame.pool.size()} games, ${MinimumGameSearchStep.pool.size()} steps\n`,
+          `Hashes:\n`,
+          totalHashes ? `  ${`Created:   ${utils.abbreviateNumber(totalHashes)}`.padEnd(20, ' ')} ${_.range(this.maxDepth + 1).map(depth => `${depth}: ${Math.round(totalHashesByDepth[depth] / totalHashes * 100)}%`).map(text => text.padEnd(9, ' ')).join(', ')}\n` : '',
+          totalHashes ? `  ${`In memory: ${utils.abbreviateNumber(_.sumBy(this.hashMapsByDepth, 'size'))}`.padEnd(20, ' ')} ${_.range(this.maxDepth + 1).map(depth => `${depth}: ${utils.abbreviateNumber(this.hashMapsByDepth[depth].size)}`).map(text => text.padEnd(9, ' ')).join(', ')}\n` : '',
+          totalHashes ? `  ${`Repeated:  ${Math.round(totalRepeatedRatio * 100)}%`.padEnd(20, ' ')} ${_.range(this.maxDepth + 1).map(depth => `${depth}: ${totalHashesByDepth[depth] ? Math.round(this.repeatedHashesByDepth[depth] / totalHashesByDepth[depth] * 100) : 0}%`).map(text => text.padEnd(9, ' ')).join(', ')}\n` : '',
           `Memory usage: RSS: ${utils.abbreviateNumber(memoryUsage.rss)}, Heap total: ${utils.abbreviateNumber(memoryUsage.heapTotal)}, Heap used: ${utils.abbreviateNumber(memoryUsage.heapUsed)}, External: ${utils.abbreviateNumber(memoryUsage.external)}\n`,
           root.leaves ? `${root.leaves.length} solutions found, of depth ${root.leaves[0].depth}\n` : `no solutions\n`,
           `total ${utils.abbreviateNumber(this.totalGameCount)} games created, in ${moment.duration(totalTime).humanize()}, ${utils.abbreviateNumber(totalGamesPerSecond)}g/s, ${moment.duration(totalTimeLeftEstimation).humanize()} left\n`,
