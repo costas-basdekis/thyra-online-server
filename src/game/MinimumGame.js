@@ -568,7 +568,7 @@ class MinimumGameSearch {
       lastTime: startTime,
       lastGameCount: this.totalGameCount,
       reportStepCount, totalStepCount,
-      previousChain: [],
+      previousChain: [], previousChainTime: {},
       report: counter => {
         if (!(counter % reportStepCount === 0 || this.finished)) {
           return;
@@ -599,8 +599,9 @@ class MinimumGameSearch {
             : 0)
           .reverse()
           .reduce((total, current) => current + (1 - current) * total);
-        const previousChain = timer.previousChain;
+        const previousChainTime = timer.previousChainTime;
         timer.previousChain = chain.map(step => step.game.position);
+        timer.previousChainTime = _.fromPairs(timer.previousChain.map(position => [position, previousChainTime[position] || now]));
         console.log(
           ` ---\n`,
           (totalStepCount !== Infinity ? `${Math.round(counter / totalStepCount * 1000) / 10}% of steps, ` : '')
@@ -611,7 +612,12 @@ class MinimumGameSearch {
           + `), pool sizes: ${MinimumGame.pool.size()} games, ${MinimumGameSearchStep.pool.size()} steps\n`,
           counter ? `  ${`Early pruned: ${utils.abbreviateNumber(totalEarlyPruned)}`.padEnd(20, ' ')} ${_.range(this.maxDepth + 1).map(depth => `${depth}: ${Math.round(this.earlyExitCountByDepth[depth] / totalEarlyPruned * 100)}%`).map(text => text.padEnd(9, ' ')).join(', ')}\n` : '',
           `Games:\n` +
-          chain.map(step => `   Depth ${step.game.depth}: ${step.game.position}, ${`${step.nextGamesCount - step.nextGamesLeft.length}/${step.nextGamesCount}`.padEnd(7, ' ')} - ${`${step.nextGamesCount ? Math.round(Math.max(0, step.nextGamesCount - step.nextGamesLeft.length - 1) / step.nextGamesCount * 100) : 100}%`.padEnd(4, ' ')} ${previousChain.includes(step.game.position) ? '' : '<-----'}\n`).join(''),
+          chain.map(step => (
+            `   Depth ${step.game.depth}: ${step.game.position}, `
+            + `${`${step.nextGamesCount - step.nextGamesLeft.length}/${step.nextGamesCount}`.padEnd(7, ' ')} `
+            + `- ${`${step.nextGamesCount ? Math.round(Math.max(0, step.nextGamesCount - step.nextGamesLeft.length - 1) / step.nextGamesCount * 100) : 100}%`.padEnd(4, ' ')} `
+            + `${previousChainTime[step.game.position] ? moment.duration(now.diff(previousChainTime[step.game.position])).humanize() : '<-----'}\n`
+          )).join(''),
           `Hashes:\n`,
           totalHashes ? `  ${`Created:      ${utils.abbreviateNumber(totalHashes)}`.padEnd(20, ' ')} ${_.range(this.maxDepth + 1).map(depth => `${depth}: ${Math.round(totalHashesByDepth[depth] / totalHashes * 100)}%`).map(text => text.padEnd(9, ' ')).join(', ')}\n` : '',
           totalHashes ? `  ${`In memory:    ${utils.abbreviateNumber(_.sumBy(this.hashMapsByDepth, 'size'))}`.padEnd(20, ' ')} ${_.range(this.maxDepth + 1).map(depth => `${depth}: ${utils.abbreviateNumber(this.hashMapsByDepth[depth].size)}`).map(text => text.padEnd(9, ' ')).join(', ')}\n` : '',
