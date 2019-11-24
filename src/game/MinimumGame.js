@@ -488,7 +488,7 @@ class MinimumGameSearch {
     this.uniqueHashesByDepth = _.range(maxDepth + 1).map(() => 0);
     this.repeatedHashesByDepth = _.range(maxDepth + 1).map(() => 0);
 
-    this.root = MinimumGameSearchStep.createNew(this, game, maxDepth, null, pool);
+    this.root = MinimumGameSearchStep.createNew(this, game, maxDepth, maxDepth, null, pool);
     this.step = this.root;
   }
 
@@ -670,12 +670,14 @@ class MinimumGameSearchStep {
     this.leaves = undefined;
     this.previous = undefined;
     this.maxDepth = undefined;
+    this.expectedDepth = undefined;
+    this.originalMaxDepth = undefined;
     this.search = undefined;
 
     this.makeNext = undefined;
   }
 
-  fromArgs(search, game, maxDepth, previous = null, pool = null) {
+  fromArgs(search, game, maxDepth, expectedDepth, previous = null, pool = null) {
     const {WIN, LOSE, UNDETERMINED} = this.constructor;
     const cachedResult = search.getCachedStep(game);
     const result = cachedResult !== null
@@ -716,6 +718,8 @@ class MinimumGameSearchStep {
       );
     this.previous = previous;
     this.maxDepth = maxDepth;
+    this.originalMaxDepth = maxDepth;
+    this.expectedDepth = expectedDepth;
 
     this.search = search;
     this.search.totalGameCount += 1;
@@ -816,7 +820,7 @@ class MinimumGameSearchStep {
     }
 
     const nextGame = this.nextGamesLeft.shift();
-    return this.makeNext(this.search, nextGame, this.maxDepth - 1, this, this.makeNext);
+    return this.makeNext(this.search, nextGame, this.maxDepth - 1, this.expectedDepth, this, this.makeNext);
   }
 
   propagateResult() {
@@ -875,6 +879,12 @@ class MinimumGameSearchStep {
 
     if (!this.leaves) {
       this.leaves = next.leaves;
+      const newDepth = next.leaves[0].depth;
+      if (newDepth < this.expectedDepth) {
+        // Pruning
+        this.maxDepth = this.originalMaxDepth - (this.expectedDepth - newDepth);
+        this.expectedDepth = newDepth;
+      }
       return;
     }
 
@@ -888,6 +898,11 @@ class MinimumGameSearchStep {
       this.leaves.push(...next.leaves);
     } else {
       this.leaves = next.leaves;
+      if (newDepth < this.expectedDepth) {
+        // Pruning
+        this.maxDepth = this.originalMaxDepth - (this.expectedDepth - newDepth);
+        this.expectedDepth = newDepth;
+      }
     }
   }
 
