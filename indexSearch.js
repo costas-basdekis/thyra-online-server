@@ -8,8 +8,9 @@ const puzzles = [
   {position: 'JEJJGJACAEAAAFDGADAAAGAAA', maxDepth: 7},
   {position: 'AGADAIACAADBAAAAADAAAAAED', maxDepth: 7},
   {position: 'DJDDAAGJCAADBEAGAAIAADAGD', maxDepth: 9},
+  {position: 'ABJDAAACFAAAAAAEAAAADAAAA', maxDepth: 9},
 ];
-const puzzle = puzzles[5];
+const puzzle = puzzles[6];
 const expectedHistoryMoves = {
   'DDAMGGMCCHAAGHAAAAADAAAAD': [
     [[{"x":4,"y":1},{"x":4,"y":2},{"x":4,"y":1}]],[[{"x":3,"y":2},{"x":4,"y":2},{"x":3,"y":2}]],
