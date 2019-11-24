@@ -6,7 +6,7 @@ const puzzles = [
   {position: 'MIMMAMHGMGMGGHGDMMIGAADAA', maxDepth: 3},
   {position: 'DAGMGAICBEAGAAAAAAAAAAAAD', maxDepth: 5},
   {position: 'JEJJGJACAEAAAFDGADAAAGAAA', maxDepth: 7},
-  {position: 'AGADAIACAADBAAAAADAAAAAED', maxDepth: 9},
+  {position: 'AGADAIACAADBAAAAADAAAAAED', maxDepth: 7},
 ];
 const puzzle = puzzles[4];
 const expectedHistoryMoves = {
@@ -3405,6 +3405,11 @@ const expectedHistoryMoves = {
   'JEJJGJACAEAAAFDGADAAAGAAA': [
     [[{"x":2,"y":1},{"x":1,"y":2},{"x":2,"y":3}],[{"x":4,"y":1},{"x":4,"y":0},{"x":4,"y":1}],[{"x":1,"y":2},{"x":2,"y":1},{"x":3,"y":0}],[{"x":4,"y":0},{"x":4,"y":1},{"x":4,"y":0}],[{"x":2,"y":1},{"x":3,"y":1},{"x":4,"y":0}],[{"x":1,"y":0},{"x":1,"y":1},{"x":0,"y":0}],[{"x":3,"y":2},{"x":2,"y":3},{"x":1,"y":4}]],
     [[{"x":2,"y":1},{"x":2,"y":2},{"x":2,"y":3}],[{"x":4,"y":1},{"x":4,"y":0},{"x":4,"y":1}],[{"x":2,"y":2},{"x":2,"y":1},{"x":3,"y":0}],[{"x":4,"y":0},{"x":4,"y":1},{"x":4,"y":0}],[{"x":2,"y":1},{"x":3,"y":1},{"x":4,"y":0}],[{"x":1,"y":0},{"x":1,"y":1},{"x":0,"y":0}],[{"x":3,"y":2},{"x":2,"y":3},{"x":1,"y":4}]],
+  ],
+  'AGADAIACAADBAAAAADAAAAAED': [
+    [[{"x":0,"y":1},{"x":1,"y":0},{"x":0,"y":0}],[{"x":1,"y":2},{"x":1,"y":1},{"x":2,"y":0}],[{"x":1,"y":0},{"x":0,"y":1},{"x":0,"y":0}],[{"x":1,"y":1},{"x":2,"y":0},{"x":3,"y":0}],[{"x":0,"y":1},{"x":0,"y":0},{"x":1,"y":0}],[{"x":2,"y":0},{"x":1,"y":1},{"x":1,"y":0}],[{"x":0,"y":0},{"x":0,"y":1},{"x":0,"y":0}]],
+    [[{"x":2,"y":1},{"x":1,"y":1},{"x":0,"y":2}],[{"x":1,"y":2},{"x":2,"y":1},{"x":2,"y":2}],[{"x":1,"y":1},{"x":2,"y":2},{"x":1,"y":1}],[{"x":3,"y":4},{"x":2,"y":3},{"x":1,"y":3}],[{"x":0,"y":1},{"x":0,"y":2},{"x":1,"y":1}],[{"x":2,"y":1},{"x":2,"y":0},{"x":3,"y":0}],[{"x":2,"y":2},{"x":1,"y":2},{"x":0,"y":1}]],
+    [[{"x":2,"y":1},{"x":1,"y":1},{"x":0,"y":2}],[{"x":1,"y":2},{"x":2,"y":1},{"x":2,"y":2}],[{"x":1,"y":1},{"x":2,"y":2},{"x":1,"y":1}],[{"x":3,"y":4},{"x":2,"y":3},{"x":1,"y":3}],[{"x":2,"y":2},{"x":1,"y":2},{"x":1,"y":1}],[{"x":2,"y":1},{"x":2,"y":2},{"x":2,"y":1}],[{"x":0,"y":1},{"x":1,"y":1},{"x":0,"y":1}]],
   ],
 }[puzzle.position];
 console.log(`Solving ${puzzle.position} (#${MinimumGame.fromPosition(puzzle.position).hash}) with depth ${puzzle.maxDepth}, ${expectedHistoryMoves ? `expecting ${expectedHistoryMoves.length} solutions` : 'without knowing how many solutions are there'}`);
