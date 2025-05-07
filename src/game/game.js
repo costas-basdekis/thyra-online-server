@@ -454,6 +454,16 @@ class Game {
     ));
   }
 
+  get currentAndNormalisedPositionNotations() {
+    return this._getProperty('_currentAndNormalisedPositionNotations', () => [
+      this.positionNotation,
+      this.normalisedPositionNotation,
+    ]);
+  }
+
+  get currentAndNormalisedPositionNotationsHistory() {
+    return this.history.map(game => game.currentAndNormalisedPositionNotations);
+  }
 
   static getAvailableMoves(availableMovesMatrix) {
     return _.flatten(availableMovesMatrix
@@ -1125,6 +1135,57 @@ class GameClassic extends Game {
       throw e;
     }
     return {moves, error: null};
+  }
+
+  static fromJsonMoves(moves) {
+    return this.create().applyJsonMoves(moves);
+  }
+
+  static convertJsonMovesToNotationsHistory(moves) {
+    return this.fromJsonMoves(moves).currentAndNormalisedPositionNotationsHistory;
+  }
+
+  applyJsonMoves(moves) {
+    let result = this;
+    for (const move of moves) {
+      result = result.applyJsonMove(move);
+      if (result.finished) {
+        break;
+      }
+    }
+    return result;
+  }
+
+  applyJsonMove(move) {
+    const {first_player: firstPlayer, type} = move;
+    if (firstPlayer !== (this.nextPlayer === Game.PLAYER_A)) {
+      throw new Error(`Expected to be ${firstPlayer ? "first's" : "second's"} player turn, but it wasn't`);
+    }
+    switch (type) {
+      case "place-workers":
+        return this
+            .placeFirstWorker({x: move.first_target_x - 1, y: move.first_target_y - 1})
+            .placeSecondWorker({x: move.second_target_x - 1, y: move.second_target_y - 1});
+      case "move-and-build":
+        if (!this.availableMovesMatrix[move.target_y - 1][move.target_x - 1]) {
+          return this.resign(this.nextPlayer);
+        }
+        const cell = this.rowsAndColumns[move.source_y - 1].cells[move.source_x - 1];
+        if (cell.player !== this.nextPlayer) {
+          throw new Error(`Tried to move a piece from a cell where the player didn't have one`);
+        }
+        const afterMove = this.moveWorker({x: move.target_x - 1, y: move.target_y - 1}, cell.worker);
+        if (afterMove.finished) {
+          this.resign(this.nextPlayer);
+        }
+        if (!afterMove.availableMovesMatrix[move.build_y - 1][move.build_x - 1]) {
+          return this.resign(this.nextPlayer);
+        }
+        return afterMove
+            .buildAroundWorker({x: move.build_x - 1, y: move.build_y - 1});
+      default:
+        throw new Error(`Unknown move type: ${type}`);
+    }
   }
 }
 Game.Classic = GameClassic;
