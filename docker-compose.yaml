@@ -1,0 +1,6 @@
+services:
+  app:
+    image: node:23-alpine3.21
+    working_dir: /app
+    volumes:
+      - .:/app
